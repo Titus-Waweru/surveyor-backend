@@ -13,7 +13,7 @@ async function sendOTP(toEmail, otp) {
     from: `"Surveyor On Demand" <${process.env.EMAIL_USERNAME}>`,
     to: toEmail,
     subject: "Your OTP for Signup",
-    text: `Your OTP is: ${otp}. It will expire in 10 minutes Please Enter to Verify.`,
+    text: `Your OTP is: ${otp}. It will expire in 3 minutes Please Enter to Verify.`,
   };
 
   return transporter.sendMail(mailOptions);

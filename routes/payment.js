@@ -3,7 +3,9 @@ const express = require('express');
 const axios = require('axios');
 const moment = require('moment');
 const router = express.Router();
-const prisma = require('../prisma'); // ✅ Ensure this points to your initialized Prisma client
+
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const {
@@ -13,6 +15,7 @@ const {
   DARAJA_PASSKEY,
   DARAJA_CALLBACK_URL,
 } = process.env;
+
 
 // ------------------ PAYSTACK ------------------
 router.post('/initiate', async (req, res) => {

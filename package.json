@@ -4,21 +4,14 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "dev": "nodemon server.js",
-    "prepare": "node generate-prisma.mjs"
-
-
+    "dev": "nodemon server.js"
   },
   "keywords": [],
   "author": "LandLink App",
   "license": "ISC",
   "description": "",
-  "engines": {
-    "node": "20.x"
-  },
   "dependencies": {
     "@prisma/client": "^6.8.2",
-    "prisma": "^6.8.2",
     "axios": "^1.9.0",
     "bcryptjs": "^3.0.2",
     "cors": "^2.8.5",
@@ -30,6 +23,7 @@
     "multer": "^1.4.5-lts.2",
     "nodemailer": "^7.0.3",
     "pg": "^8.15.6",
+    "prisma": "^6.8.2",
     "twilio": "^5.6.1"
   },
   "devDependencies": {
