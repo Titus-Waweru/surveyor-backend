@@ -5,12 +5,15 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx --yes prisma generate"
   },
   "keywords": [],
   "author": "LandLink App",
   "license": "ISC",
   "description": "",
+  "engines": {
+    "node": "20.x"
+  },
   "dependencies": {
     "@prisma/client": "^6.8.2",
     "prisma": "^6.8.2",
