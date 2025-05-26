@@ -2,8 +2,10 @@ const express = require("express");
 const cors = require("cors");
 const dotenv = require("dotenv");
 const path = require("path");
+const { PrismaClient } = require("@prisma/client"); // ✅ Import Prisma Client
+const prisma = new PrismaClient(); // ✅ Initialize Prisma
 
-dotenv.config(); // Load .env
+dotenv.config(); // Load environment variables
 
 // ================== ROUTE IMPORTS ==================
 const authRoutes = require("./routes/auth");

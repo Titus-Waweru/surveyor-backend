@@ -27,7 +27,7 @@ const upload = multer({ storage });
 
 // Create a new booking
 router.post("/bookings", async (req, res) => {
-  const { location, surveyType, description, preferredDate, email } = req.body;
+  const { location, surveyType, description, preferredDate, email, latitude, longitude } = req.body;
 
   if (!email || !location || !surveyType || !description || !preferredDate) {
     return res.status(400).json({ message: "All fields are required." });
@@ -43,6 +43,8 @@ router.post("/bookings", async (req, res) => {
         surveyType,
         description,
         preferredDate: new Date(preferredDate),
+        latitude: latitude ? parseFloat(latitude) : null,
+        longitude: longitude ? parseFloat(longitude) : null,
         status: "Pending",
         user: { connect: { id: user.id } },
       },
@@ -82,7 +84,7 @@ router.get("/bookings", async (req, res) => {
 
 // ======================= PROFILE =======================
 
-// Get client profile
+// Get profile (client or surveyor)
 router.get("/profile", async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ message: "Email required." });
@@ -95,6 +97,7 @@ router.get("/profile", async (req, res) => {
         name: true,
         email: true,
         role: true,
+        iskNumber: true, // ✅ Added for surveyor profiles
         profileImageUrl: true,
         phoneNumber: true,
         notificationsEnabled: true,
@@ -110,7 +113,7 @@ router.get("/profile", async (req, res) => {
   }
 });
 
-// Update client profile (name, phone, profile image)
+// Update profile (name, phone, profile image)
 router.put("/profile", upload.single("profileImage"), async (req, res) => {
   const { email, name, phoneNumber } = req.body;
 
@@ -138,7 +141,7 @@ router.put("/profile", upload.single("profileImage"), async (req, res) => {
   }
 });
 
-// Toggle notifications (safe and working)
+// Toggle notifications
 router.put("/profile/toggle-notifications", async (req, res) => {
   const { email } = req.body;
 

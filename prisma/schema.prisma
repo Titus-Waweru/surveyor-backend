@@ -45,6 +45,9 @@ model Booking {
   status             String   @default("Pending")
   createdAt          DateTime @default(now())
 
+  latitude           Float?   // Added: Latitude of the location
+  longitude          Float?   // Added: Longitude of the location
+
   // Relation to client user
   userId             Int
   user               User     @relation(fields: [userId], references: [id])

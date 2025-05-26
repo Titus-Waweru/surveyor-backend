@@ -3,6 +3,7 @@ const express = require('express');
 const axios = require('axios');
 const moment = require('moment');
 const router = express.Router();
+const prisma = require('../prisma'); // ✅ Ensure this points to your initialized Prisma client
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const {
@@ -16,6 +17,10 @@ const {
 // ------------------ PAYSTACK ------------------
 router.post('/initiate', async (req, res) => {
   const { email, amount } = req.body;
+
+  if (!email || !amount) {
+    return res.status(400).json({ error: 'Email and amount are required' });
+  }
 
   try {
     const response = await axios.post(
@@ -31,6 +36,16 @@ router.post('/initiate', async (req, res) => {
         },
       }
     );
+
+    // ✅ Store pending payment
+    await prisma.payment.create({
+      data: {
+        email,
+        amount: amount * 100,
+        method: 'paystack',
+        status: 'pending',
+      },
+    });
 
     res.json({ url: response.data.data.authorization_url });
   } catch (error) {
@@ -55,6 +70,10 @@ async function getMpesaAccessToken() {
 
 router.post('/mpesa', async (req, res) => {
   const { phone, amount } = req.body;
+
+  if (!phone || !amount) {
+    return res.status(400).json({ error: 'Phone and amount are required' });
+  }
 
   try {
     const accessToken = await getMpesaAccessToken();
@@ -86,6 +105,16 @@ router.post('/mpesa', async (req, res) => {
       }
     );
 
+    // ✅ Store pending payment
+    await prisma.payment.create({
+      data: {
+        phone,
+        amount: amount * 100,
+        method: 'mpesa',
+        status: 'pending',
+      },
+    });
+
     res.json({ success: true, message: 'STK Push sent', data: response.data });
   } catch (err) {
     console.error('MPESA Error:', err.response?.data || err.message);
@@ -93,10 +122,11 @@ router.post('/mpesa', async (req, res) => {
   }
 });
 
-// Optional: MPESA Callback handler
+// ------------------ MPESA CALLBACK HANDLER ------------------
 router.post('/mpesa/callback', (req, res) => {
   console.log('MPESA CALLBACK:', JSON.stringify(req.body, null, 2));
-  res.sendStatus(200); // Respond to Safaricom with 200 OK
+  // TODO: Optionally update payment status here
+  res.sendStatus(200);
 });
 
 module.exports = router;
