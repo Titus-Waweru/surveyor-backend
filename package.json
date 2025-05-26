@@ -5,7 +5,7 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "prepare": "npx prisma generate"
+    "prepare": "node generate-prisma.mjs"
 
 
   },
