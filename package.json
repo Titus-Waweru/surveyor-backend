@@ -25,7 +25,7 @@
     "nodemailer": "^7.0.3",
     "pg": "^8.15.6",
     "twilio": "^5.6.1",
-    "prisma": "^6.7.0"  // 👈 moved here from devDependencies
+    "prisma": "^6.7.0"  
   },
   "devDependencies": {
     "nodemon": "^3.1.10"
