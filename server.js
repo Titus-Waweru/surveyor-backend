@@ -17,9 +17,11 @@ const app = express();
 
 // ✅ CORS Configuration
 const allowedOrigins = [
-  "http://localhost:5173",
-  "https://surveyor-frontend-xi.vercel.app/", // ✅ Replace with your actual Vercel URL
+  'http://localhost:3000',
+  'https://surveyor-frontend-xi.vercel.app',
+  'https://surveyor-frontend-git-main-titus-wawerus-projects.vercel.app',
 ];
+
 
 app.use(cors({
   origin: function (origin, callback) {
