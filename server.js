@@ -18,9 +18,12 @@ const app = express();
 // ✅ CORS Configuration
 const allowedOrigins = [
   'http://localhost:3000',
+  'http://localhost:5173',
   'https://surveyor-frontend-xi.vercel.app',
   'https://surveyor-frontend-git-main-titus-wawerus-projects.vercel.app',
+  'https://surveyor-frontend-d3rnhnm28-titus-wawerus-projects.vercel.app' // 👈 ADD THIS
 ];
+
 
 
 app.use(cors({
@@ -56,6 +59,8 @@ app.use("/api/payment", paymentRoutes);
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found ❌" });
 });
+
+
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
