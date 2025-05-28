@@ -21,8 +21,10 @@ const allowedOrigins = [
   'http://localhost:5173',
   'https://surveyor-frontend-xi.vercel.app',
   'https://surveyor-frontend-git-main-titus-wawerus-projects.vercel.app',
-  'https://surveyor-frontend-d3rnhnm28-titus-wawerus-projects.vercel.app' // 👈 ADD THIS
+  'https://surveyor-frontend-d3rnhnm28-titus-wawerus-projects.vercel.app',
+  'https://surveyor-frontend-ien1wf1ct-titus-wawerus-projects.vercel.app' // ✅ THIS ONE
 ];
+
 
 
 
