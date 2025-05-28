@@ -10,7 +10,7 @@ const transporter = nodemailer.createTransport({
 
 async function sendOTP(toEmail, otp) {
   const mailOptions = {
-    from: `"Surveyor On Demand" <${process.env.EMAIL_USERNAME}>`,
+    from: `"LandLink Ltd" <${process.env.EMAIL_USERNAME}>`,
     to: toEmail,
     subject: "Your OTP for Signup",
     text: `Your OTP is: ${otp}. It will expire in 3 minutes Please Enter to Verify.`,
