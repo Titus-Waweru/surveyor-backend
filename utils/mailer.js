@@ -1,7 +1,7 @@
 const nodemailer = require("nodemailer");
 
 const transporter = nodemailer.createTransport({
-  service: "gmail",
+  service: "gmail", // Replace this with a verified sender domain if possible
   auth: {
     user: process.env.EMAIL_USERNAME,
     pass: process.env.EMAIL_PASSWORD,
@@ -12,33 +12,44 @@ async function sendOTP(toEmail, otp) {
   const mailOptions = {
     from: `"LandLink Ltd" <${process.env.EMAIL_USERNAME}>`,
     to: toEmail,
-    subject: "🔐 Your One-Time Password (OTP) for LandLink Signup",
+    subject: "Your OTP Code to Verify Your Email",
+    text: `
+Hi there,
+
+Your One-Time Password (OTP) for LandLink is: ${otp}
+
+Please enter this code within 3 minutes to verify your email address.
+
+If you didn't request this, you can safely ignore this email.
+
+Thanks,  
+LandLink Ltd
+    `.trim(),
+
     html: `
-      <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #fdfaf4; padding: 20px; border-radius: 8px; color: #333;">
-        <h2 style="color: #d97706;">Welcome to LandLink Ltd 👋</h2>
-        <p>Thank you for signing up with <strong>LandLink</strong> — your trusted platform for land surveying and real estate management.</p>
-        
-        <p style="font-size: 16px; margin-top: 20px;">
-          <strong>Your OTP code is:</strong>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #fff6e5;">
+        <h2 style="color: #d97706;">Verify Your Email - LandLink Ltd</h2>
+        <p style="font-size: 15px; color: #333;">
+          Hello,
         </p>
-        
-        <div style="font-size: 24px; font-weight: bold; letter-spacing: 4px; background-color: #fff8e5; color: #d97706; padding: 12px 20px; border-radius: 6px; display: inline-block; margin: 10px 0;">
-          ${otp}
+        <p style="font-size: 15px; color: #333;">
+          Thank you for signing up with <strong>LandLink Ltd</strong>! Your One-Time Password (OTP) is:
+        </p>
+        <p style="font-size: 28px; font-weight: bold; letter-spacing: 5px; color: #111; margin: 20px 0;">${otp}</p>
+        <p style="font-size: 15px; color: #333;">
+          Please enter this code in the app within <strong>3 minutes</strong> to verify your email address.
+        </p>
+        <hr style="margin: 20px 0;" />
+        <p style="font-size: 13px; color: #666;">
+          If you didn’t request this OTP, no action is required. You can safely ignore this message.
+        </p>
+        <p style="font-size: 13px; color: #666; margin-top: 30px;">
+          — The LandLink Team
+        </p>
+        <div style="margin-top: 40px; font-size: 12px; color: #999; text-align: center;">
+          LandLink Ltd, Nairobi, Kenya<br/>
+          <a href="mailto:support@landlink.co.ke" style="color: #999;">support@landlink.co.ke</a> | landlink.co.ke
         </div>
-
-        <p style="margin-top: 20px;">
-          Please enter this code on the verification page to complete your signup. This OTP is valid for <strong>3 minutes</strong> only. 
-          Do not share this code with anyone.
-        </p>
-
-        <hr style="margin: 30px 0; border: none; border-top: 1px solid #eee;" />
-
-        <p style="font-size: 13px; color: #888;">
-          This email was sent by LandLink Ltd. If you did not request this, please ignore this message.
-        </p>
-        <p style="font-size: 13px; color: #888;">
-          © ${new Date().getFullYear()} LandLink Ltd. All rights reserved.
-        </p>
       </div>
     `,
   };

@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
+const sendEmail = require("../utils/sendEmail"); // ✅ Make sure this file exists
 
 const prisma = new PrismaClient();
 
@@ -77,7 +78,6 @@ router.patch("/bookings/:id/status", async (req, res) => {
   }
 
   try {
-    // Validate status values
     const allowedStatuses = ["pending", "in progress", "completed", "accepted", "rejected"];
     let newStatus = null;
 
@@ -95,9 +95,32 @@ router.patch("/bookings/:id/status", async (req, res) => {
     const updatedBooking = await prisma.booking.update({
       where: { id: parseInt(id) },
       data: { status: newStatus },
+      include: {
+        client: true,
+        assignedBy: true,
+      },
     });
 
-    // TODO: send notifications to admin and client here
+    // ✅ Send emails on "accepted" status
+    if (newStatus === "accepted") {
+      const { client, assignedBy, location } = updatedBooking;
+
+      if (assignedBy?.email) {
+        await sendEmail({
+          to: assignedBy.email,
+          subject: "Survey Assignment Accepted",
+          text: `The surveyor has accepted the job at: ${location}.`,
+        });
+      }
+
+      if (client?.email) {
+        await sendEmail({
+          to: client.email,
+          subject: "Surveyor Accepted Your Request",
+          text: `A surveyor has accepted your survey booking at: ${location}. We'll keep you updated.`,
+        });
+      }
+    }
 
     res.json(updatedBooking);
   } catch (err) {
