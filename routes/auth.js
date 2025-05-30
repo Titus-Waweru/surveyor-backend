@@ -151,7 +151,7 @@ router.post("/resend-otp", async (req, res) => {
  * LOGIN
  */
 router.post("/login", async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, rememberMe } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required." });
@@ -177,7 +177,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "fallbacksecret",
-      { expiresIn: "1d" }
+      { expiresIn: rememberMe ? "30d" : "1d" }
     );
 
     return res.json({
@@ -192,5 +192,6 @@ router.post("/login", async (req, res) => {
     return res.status(500).json({ message: "Server error during login." });
   }
 });
+
 
 module.exports = router;
