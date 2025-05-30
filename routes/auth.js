@@ -193,5 +193,15 @@ router.post("/login", async (req, res) => {
   }
 });
 
+/**
+ * LOGOUT
+ * This is optional – just to satisfy the frontend call
+ */
+router.post("/logout", (req, res) => {
+  // You can optionally clear a refresh token cookie here, if implemented
+  return res.status(200).json({ message: "Logged out successfully." });
+});
+
+
 
 module.exports = router;
