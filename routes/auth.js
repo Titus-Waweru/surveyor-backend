@@ -148,10 +148,10 @@ router.post("/resend-otp", async (req, res) => {
 });
 
 /**
- * LOGIN
+ * LOGIN (Always issues a 30-day token)
  */
 router.post("/login", async (req, res) => {
-  const { email, password, rememberMe } = req.body;
+  const { email, password } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({ message: "Email and password are required." });
@@ -177,7 +177,7 @@ router.post("/login", async (req, res) => {
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
       process.env.JWT_SECRET || "fallbacksecret",
-      { expiresIn: rememberMe ? "30d" : "1d" }
+      { expiresIn: "30d" }
     );
 
     return res.json({
@@ -195,13 +195,10 @@ router.post("/login", async (req, res) => {
 
 /**
  * LOGOUT
- * This is optional – just to satisfy the frontend call
  */
 router.post("/logout", (req, res) => {
-  // You can optionally clear a refresh token cookie here, if implemented
+  // If using cookies, you'd clear them here. Otherwise just respond OK.
   return res.status(200).json({ message: "Logged out successfully." });
 });
-
-
 
 module.exports = router;
