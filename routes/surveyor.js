@@ -109,7 +109,7 @@ router.patch("/bookings/:id/status", async (req, res) => {
         await sendEmail({
           to: user.email,
           subject: "Surveyor Accepted Your Booking",
-          text: `A surveyor has accepted your booking at ${location}. We'll keep you updated.`,
+          text: `A surveyor has accepted your booking at ${location}. We'll keep you updated. Thank You.`,
         });
       }
     }

@@ -93,8 +93,8 @@ router.post('/mpesa', async (req, res) => {
       PartyB: DARAJA_SHORTCODE,
       PhoneNumber: phone,
       CallBackURL: DARAJA_CALLBACK_URL,
-      AccountReference: 'SurveyorApp',
-      TransactionDesc: 'Payment to Surveyor App',
+      AccountReference: 'LandLink',
+      TransactionDesc: 'Payment to LandLink App',
     };
 
     const response = await axios.post(
