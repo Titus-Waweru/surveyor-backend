@@ -57,3 +57,17 @@ model Booking {
   assignedSurveyorId Int?
   assignedSurveyor   User? @relation("SurveyorBookings", fields: [assignedSurveyorId], references: [id])
 }
+
+// ===========================
+// DemoBooking Model
+// ===========================
+model DemoBooking {
+  id        Int      @id @default(autoincrement())
+  name      String
+  email     String
+  company   String?
+  phone     String?
+  date      DateTime
+  createdAt DateTime @default(now())
+}
+

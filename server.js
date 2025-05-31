@@ -12,6 +12,7 @@ const dashboardRoutes = require("./routes/dashboard");
 const surveyorRoutes = require("./routes/surveyor");
 const adminRoutes = require("./routes/admin");
 const paymentRoutes = require("./routes/payment");
+const demoRoutes = require("./routes/demo");
 
 const app = express();
 
@@ -56,6 +57,7 @@ app.use("/api", dashboardRoutes);
 app.use("/api/surveyor", surveyorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
+app.use("/api/demo", demoRoutes);
 
 // ✅ Catch-all 404
 app.use((req, res) => {
