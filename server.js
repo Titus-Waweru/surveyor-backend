@@ -23,11 +23,10 @@ const allowedOrigins = [
   'https://surveyor-frontend-xi.vercel.app',
   'https://surveyor-frontend-git-main-titus-wawerus-projects.vercel.app',
   'https://surveyor-frontend-d3rnhnm28-titus-wawerus-projects.vercel.app',
-  'https://surveyor-frontend-ien1wf1ct-titus-wawerus-projects.vercel.app' // ✅ THIS ONE
+  'https://surveyor-frontend-ien1wf1ct-titus-wawerus-projects.vercel.app',
+  'https://www.landlink.co.ke', // ✅ added
+  'https://landlink.co.ke'      // ✅ added
 ];
-
-
-
 
 app.use(cors({
   origin: function (origin, callback) {
@@ -63,8 +62,6 @@ app.use("/api/demo", demoRoutes);
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found ❌" });
 });
-
-
 
 // ✅ Start server
 const PORT = process.env.PORT || 5000;
