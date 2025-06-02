@@ -71,3 +71,16 @@ model DemoBooking {
   createdAt DateTime @default(now())
 }
 
+// ===========================
+// MODEL PAYMENT
+// ===========================
+
+model Payment {
+  id        String   @id @default(cuid())
+  email     String
+  amount    Int
+  method    String
+  status    String
+  reference String
+  createdAt DateTime @default(now())
+}
