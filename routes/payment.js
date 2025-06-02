@@ -1,4 +1,3 @@
-// /routes/payment.js
 const express = require('express');
 const axios = require('axios');
 const moment = require('moment');
@@ -6,6 +5,9 @@ const router = express.Router();
 
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
+
+// ✅ Ensure environment variables are loaded
+require('dotenv').config();
 
 const PAYSTACK_SECRET_KEY = process.env.PAYSTACK_SECRET_KEY;
 const {
@@ -16,6 +18,10 @@ const {
   DARAJA_CALLBACK_URL,
 } = process.env;
 
+// Log Paystack key status (for dev only)
+if (!PAYSTACK_SECRET_KEY) {
+  console.error('❌ PAYSTACK_SECRET_KEY is missing in your .env file.');
+}
 
 // ------------------ PAYSTACK ------------------
 router.post('/initiate', async (req, res) => {
@@ -23,6 +29,10 @@ router.post('/initiate', async (req, res) => {
 
   if (!email || !amount) {
     return res.status(400).json({ error: 'Email and amount are required' });
+  }
+
+  if (!PAYSTACK_SECRET_KEY) {
+    return res.status(500).json({ error: 'Server misconfigured: Paystack secret key missing' });
   }
 
   try {
@@ -52,7 +62,7 @@ router.post('/initiate', async (req, res) => {
 
     res.json({ url: response.data.data.authorization_url });
   } catch (error) {
-    console.error('Paystack Init Error:', error.response?.data || error.message);
+    console.error('❌ Paystack Init Error:', error.response?.data || error.message);
     res.status(500).json({ error: 'Payment initialization failed' });
   }
 });
@@ -120,14 +130,14 @@ router.post('/mpesa', async (req, res) => {
 
     res.json({ success: true, message: 'STK Push sent', data: response.data });
   } catch (err) {
-    console.error('MPESA Error:', err.response?.data || err.message);
+    console.error('❌ MPESA Error:', err.response?.data || err.message);
     res.status(500).json({ error: 'Failed to initiate M-Pesa payment' });
   }
 });
 
 // ------------------ MPESA CALLBACK HANDLER ------------------
 router.post('/mpesa/callback', (req, res) => {
-  console.log('MPESA CALLBACK:', JSON.stringify(req.body, null, 2));
+  console.log('📥 MPESA CALLBACK:', JSON.stringify(req.body, null, 2));
   // TODO: Optionally update payment status here
   res.sendStatus(200);
 });
