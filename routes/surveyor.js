@@ -1,7 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const { PrismaClient } = require("@prisma/client");
-const sendEmail = require("../utils/sendEmail"); // Ensure this exists
+const sendEmail = require("../utils/sendEmail");
 
 const prisma = new PrismaClient();
 
@@ -22,14 +22,8 @@ router.get("/dashboard", async (req, res) => {
       orderBy: { createdAt: "desc" },
     });
 
-    const completedCount = assignedBookings.filter(
-      b => b.status.toLowerCase() === "completed"
-    ).length;
-
-    const pendingCount = assignedBookings.filter(
-      b => b.status.toLowerCase() === "pending"
-    ).length;
-
+    const completedCount = assignedBookings.filter(b => b.status.toLowerCase() === "completed").length;
+    const pendingCount = assignedBookings.filter(b => b.status.toLowerCase() === "pending").length;
     const recentBookings = assignedBookings.slice(0, 5);
 
     res.json({
@@ -96,20 +90,71 @@ router.patch("/bookings/:id/status", async (req, res) => {
       where: { id: parseInt(id) },
       data: { status: newStatus },
       include: {
-        user: true, // The client who created the booking
-        assignedSurveyor: true, // Optional
+        user: true,
+        assignedSurveyor: true,
       },
     });
 
-    // ✅ Send email notifications if accepted
-    if (newStatus === "accepted") {
-      const { user, location } = updatedBooking;
+    const { user, assignedSurveyor, location } = updatedBooking;
 
+    if (newStatus === "accepted") {
+      // Notify Client
       if (user?.email) {
         await sendEmail({
           to: user.email,
-          subject: "Surveyor Accepted Your Booking",
-          text: `A surveyor has accepted your booking at ${location}. We'll keep you updated. Thank You.`,
+          subject: "Your Booking Has Been Accepted",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <img src="https://www.landlink.co.ke/logo.png" alt="LandLink Logo" style="height: 60px; margin-bottom: 20px;" />
+              <h2 style="color: #d4a600;">Your Booking Has Been Accepted</h2>
+              <p>Dear ${user.name || "Client"},</p>
+              <p>
+                A surveyor has accepted your booking for <strong>${location}</strong>.
+              </p>
+              <p>
+                You can view your booking details in your LandLink dashboard.
+              </p>
+              <a href="https://www.landlink.co.ke/client-dashboard/bookings" 
+                 style="display: inline-block; margin: 20px 0; padding: 12px 24px; background-color: #d4a600; color: #fff;
+                 text-decoration: none; border-radius: 5px; font-weight: bold;">
+                View Booking
+              </a>
+              <p>Thank you for using <strong>LandLink</strong>.</p>
+              <p>Best regards,<br/>The LandLink Team</p>
+              <hr style="margin-top: 30px;" />
+              <small style="color: #888;">This is an automated message. Please do not reply.</small>
+            </div>
+          `,
+        });
+      }
+
+      // Notify Surveyor
+      if (assignedSurveyor?.email) {
+        await sendEmail({
+          to: assignedSurveyor.email,
+          subject: "You Have Accepted a New Booking",
+          html: `
+            <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #333;">
+              <img src="https://www.landlink.co.ke/logo.png" alt="LandLink Logo" style="height: 60px; margin-bottom: 20px;" />
+              <h2 style="color: #d4a600;">Booking Confirmation</h2>
+              <p>Dear ${assignedSurveyor.name || "Surveyor"},</p>
+              <p>
+                You have successfully accepted the survey booking for <strong>${location}</strong>.
+              </p>
+              <p>
+                Please log in to your dashboard to view full details and begin the assignment.
+              </p>
+              <a href="https://www.landlink.co.ke/surveyor-dashboard/bookings" 
+                 style="display: inline-block; margin: 20px 0; padding: 12px 24px; background-color: #d4a600; color: #fff;
+                 text-decoration: none; border-radius: 5px; font-weight: bold;">
+                Go to Assignments
+              </a>
+              <p>Thank you for being a part of <strong>LandLink</strong>.</p>
+              <p>Best regards,<br/>The LandLink Team</p>
+              <hr style="margin-top: 30px;" />
+              <small style="color: #888;">This is an automated message. Please do not reply.</small>
+            </div>
+          `,
         });
       }
     }
