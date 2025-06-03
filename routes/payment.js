@@ -8,23 +8,33 @@ const prisma = new PrismaClient();
 router.post("/initiate", async (req, res) => {
   const { email, amount } = req.body;
 
-  if (!email || !amount) return res.status(400).json({ error: "Missing email or amount" });
+  if (!email || !amount) {
+    return res.status(400).json({ error: "Missing email or amount" });
+  }
+
+  const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY;
+  if (!PAYSTACK_SECRET) {
+    console.error("Missing PAYSTACK_SECRET_KEY in environment variables");
+    return res.status(500).json({ error: "Payment configuration error" });
+  }
 
   try {
     const paystackRes = await axios.post(
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: Math.floor(amount * 100), // Paystack expects amount in kobo
+        amount: Math.floor(amount * 100), // Paystack uses kobo
       },
       {
         headers: {
-          Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}`,
+          Authorization: `Bearer ${PAYSTACK_SECRET}`,
+          "Content-Type": "application/json",
         },
       }
     );
 
     const paymentData = paystackRes.data?.data;
+
     if (paymentData) {
       await prisma.payment.create({
         data: {
@@ -35,6 +45,7 @@ router.post("/initiate", async (req, res) => {
           reference: paymentData.reference,
         },
       });
+
       res.json({ url: paymentData.authorization_url });
     } else {
       res.status(500).json({ error: "Unable to initiate payment" });
@@ -49,10 +60,11 @@ router.post("/initiate", async (req, res) => {
 router.post("/mpesa", async (req, res) => {
   const { phone, amount } = req.body;
 
-  if (!phone || !amount) return res.status(400).json({ error: "Phone and amount are required" });
+  if (!phone || !amount) {
+    return res.status(400).json({ error: "Phone and amount are required" });
+  }
 
   try {
-    // STEP 1: Get access token
     const auth = Buffer.from(
       `${process.env.MPESA_CONSUMER_KEY}:${process.env.MPESA_CONSUMER_SECRET}`
     ).toString("base64");
@@ -68,7 +80,6 @@ router.post("/mpesa", async (req, res) => {
 
     const accessToken = tokenRes.data.access_token;
 
-    // STEP 2: STK Push request
     const timestamp = new Date()
       .toISOString()
       .replace(/[^0-9]/g, "")
@@ -89,13 +100,14 @@ router.post("/mpesa", async (req, res) => {
         PartyA: phone,
         PartyB: process.env.MPESA_SHORTCODE,
         PhoneNumber: phone,
-        CallBackURL: `${process.env.BASE_URL}/api/payments/mpesa/callback`,
+        CallBackURL: `${process.env.BASE_URL}/api/payment/mpesa/callback`,
         AccountReference: "LandLink",
         TransactionDesc: "LandLink Payment",
       },
       {
         headers: {
           Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
         },
       }
     );
@@ -121,9 +133,7 @@ router.post("/mpesa", async (req, res) => {
 
 // MPESA CALLBACK
 router.post("/mpesa/callback", async (req, res) => {
-  const body = req.body;
-
-  const stkCallback = body?.Body?.stkCallback;
+  const stkCallback = req.body?.Body?.stkCallback;
   if (!stkCallback) return res.sendStatus(400);
 
   const { CheckoutRequestID, ResultCode } = stkCallback;
@@ -145,7 +155,7 @@ router.post("/mpesa/callback", async (req, res) => {
   }
 });
 
-// GET PAYMENTS
+// GET PAYMENTS BY EMAIL
 router.get("/", async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ error: "Missing email" });
