@@ -174,9 +174,15 @@ router.post("/login", async (req, res) => {
       });
     }
 
+    const jwtSecret = process.env.JWT_SECRET;
+    if (!jwtSecret) {
+      console.error("❌ JWT_SECRET is not defined in environment variables.");
+      return res.status(500).json({ message: "Server misconfiguration." });
+    }
+
     const token = jwt.sign(
       { id: user.id, email: user.email, role: user.role },
-      process.env.JWT_SECRET || "fallbacksecret",
+      jwtSecret,
       { expiresIn: "30d" }
     );
 
@@ -200,7 +206,5 @@ router.post("/logout", (req, res) => {
   // If using cookies, you'd clear them here. Otherwise just respond OK.
   return res.status(200).json({ message: "Logged out successfully." });
 });
-
-
 
 module.exports = router;
