@@ -1,29 +1,17 @@
 const express = require("express");
 const multer = require("multer");
-const path = require("path");
-const fs = require("fs");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
 const { sendOTP } = require("../utils/mailer");
 
+// 🔽 Cloudinary setup
+const { storage } = require("../utils/cloudinary");
+const upload = multer({ storage });
+
 const router = express.Router();
 const prisma = new PrismaClient();
 const tempUsers = new Map(); // Holds temp user data until OTP is verified
-
-// Ensure uploads directory exists
-const uploadDir = path.join(__dirname, "../uploads");
-if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir);
-
-// Multer setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadDir),
-  filename: (req, file, cb) => {
-    const uniqueSuffix = Date.now() + "-" + Math.round(Math.random() * 1e9);
-    cb(null, uniqueSuffix + "-" + file.originalname);
-  },
-});
-const upload = multer({ storage });
 
 /**
  * SIGNUP - Store temp user in memory and send OTP
@@ -64,8 +52,8 @@ router.post(
         otp,
         otpExpiresAt,
         iskNumber: role === "surveyor" ? iskNumber.trim() : null,
-        idCardUrl: idCardFile ? `/uploads/${idCardFile.filename}` : null,
-        certUrl: certFile ? `/uploads/${certFile.filename}` : null,
+        idCardUrl: idCardFile ? idCardFile.path : null,
+        certUrl: certFile ? certFile.path : null,
         status: role === "surveyor" ? "pending" : "approved",
         paid: role === "surveyor" ? false : true,
       };
