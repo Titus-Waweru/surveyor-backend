@@ -1,18 +1,18 @@
 const cloudinary = require("cloudinary").v2;
 const { CloudinaryStorage } = require("multer-storage-cloudinary");
 
-// Configure Cloudinary with your credentials (use env variables!)
+// Configure Cloudinary with your credentials from environment variables
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
   api_key: process.env.CLOUDINARY_API_KEY,
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure multer storage to upload directly to Cloudinary
+// Multer storage config for Cloudinary
 const storage = new CloudinaryStorage({
   cloudinary,
   params: {
-    folder: "landlink_docs", // folder in your Cloudinary account to save files
+    folder: "landlink_docs", // folder name in your Cloudinary account
     allowed_formats: ["jpg", "jpeg", "png", "pdf"],
   },
 });
