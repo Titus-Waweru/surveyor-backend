@@ -30,11 +30,11 @@ router.post(
       if (existing) return res.status(400).json({ message: "User already exists." });
 
       if (
-        role === "surveyor" &&
+        (role === "surveyor" || role === "gis-expert") &&
         (!idCardFile || !certFile || !iskNumber?.trim())
       ) {
         return res.status(400).json({
-          message: "Surveyors must upload ID card, certificate, and ISK number.",
+          message: `${role === 'surveyor' ? 'Surveyors' : 'GIS Experts'} must upload ID card, certificate, and ISK number.`,
         });
       }
 
@@ -49,11 +49,11 @@ router.post(
         role,
         otp,
         otpExpiresAt,
-        iskNumber: role === "surveyor" ? iskNumber.trim() : null,
+        iskNumber: (role === "surveyor" || role === "gis-expert") ? iskNumber.trim() : null,
         idCardUrl: idCardFile ? idCardFile.path : null,
         certUrl: certFile ? certFile.path : null,
-        status: role === "surveyor" ? "pending" : "approved",
-        paid: role === "surveyor" ? false : true,
+        status: (role === "surveyor" || role === "gis-expert") ? "pending" : "approved",
+        paid: (role === "surveyor" || role === "gis-expert") ? false : true,
       };
 
       tempUsers.set(email, tempUserData);
@@ -93,8 +93,8 @@ router.post("/verify-otp", async (req, res) => {
   try {
     const { otp, otpExpiresAt, ...userData } = tempUser;
 
-    if (userData.role === "surveyor") {
-      // Surveyor not saved to DB yet — awaiting admin approval
+    if (userData.role === "surveyor" || userData.role === "gis-expert") {
+      // Not saved to DB yet — awaiting admin approval
       tempUsers.set(email, userData);
       return res.status(200).json({
         message: "✅ OTP verified. Awaiting admin approval.",
@@ -102,7 +102,6 @@ router.post("/verify-otp", async (req, res) => {
       });
     }
 
-    // Others are saved immediately
     const newUser = await prisma.user.create({ data: userData });
     tempUsers.delete(email);
 
@@ -164,9 +163,9 @@ router.post("/login", async (req, res) => {
       return res.status(400).json({ message: "Invalid email or password." });
     }
 
-    if (user.role === "surveyor" && user.status !== "approved") {
+    if ((user.role === "surveyor" || user.role === "gis-expert") && user.status !== "approved") {
       return res.status(403).json({
-        message: "Surveyor not approved yet. We’ll notify you after review.",
+        message: `${user.role === 'surveyor' ? 'Surveyor' : 'GIS Expert'} not approved yet. We’ll notify you after review.`,
       });
     }
 
@@ -201,7 +200,5 @@ router.post("/login", async (req, res) => {
 router.post("/logout", (req, res) => {
   return res.status(200).json({ message: "Logged out successfully." });
 });
-
-
 
 module.exports = router;
