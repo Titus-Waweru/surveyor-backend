@@ -28,7 +28,7 @@ LandLink Ltd
 
     html: `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #fff6e5;">
-        <h2 style="color: #d97706;">Verify Your Email - LandLink Ltd</h2>
+        <h2 style="color:rgb(203, 120, 25);">Verify Your Email - LandLink Ltd</h2>
         <p style="font-size: 15px; color: #333;">
           Hello,
         </p>

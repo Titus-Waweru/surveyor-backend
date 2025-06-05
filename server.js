@@ -13,6 +13,7 @@ const surveyorRoutes = require("./routes/surveyor");
 const adminRoutes = require("./routes/admin");
 const paymentRoutes = require("./routes/payment");
 const demoRoutes = require("./routes/demo");
+const gisRoutes = require("./routes/gis"); // ✅ ADDED: GIS Expert route
 
 const app = express();
 
@@ -24,13 +25,12 @@ const allowedOrigins = [
   'https://surveyor-frontend-git-main-titus-wawerus-projects.vercel.app',
   'https://surveyor-frontend-d3rnhnm28-titus-wawerus-projects.vercel.app',
   'https://surveyor-frontend-ien1wf1ct-titus-wawerus-projects.vercel.app',
-  'https://www.landlink.co.ke', // ✅ added
-  'https://landlink.co.ke'      // ✅ added
+  'https://www.landlink.co.ke',
+  'https://landlink.co.ke'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    // Allow requests with no origin (like mobile apps, curl, Postman)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) {
       return callback(null, true);
@@ -57,6 +57,7 @@ app.use("/api/surveyor", surveyorRoutes);
 app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/demo", demoRoutes);
+app.use("/api/gis", gisRoutes); // ✅ ADDED: Mount GIS Expert route
 
 // ✅ Catch-all 404
 app.use((req, res) => {
