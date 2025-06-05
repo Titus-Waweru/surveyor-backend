@@ -202,40 +202,6 @@ router.post("/logout", (req, res) => {
   return res.status(200).json({ message: "Logged out successfully." });
 });
 
-/**
- * ADMIN: Approve surveyor
- */
-router.post("/admin/approve-surveyor", async (req, res) => {
-  const { email } = req.body;
-  const tempUser = tempUsers.get(email);
 
-  if (!tempUser || tempUser.role !== "surveyor") {
-    return res.status(404).json({ message: "Surveyor not found or already handled." });
-  }
-
-  try {
-    const newUser = await prisma.user.create({ data: tempUser });
-    tempUsers.delete(email);
-
-    return res.status(201).json({ message: "Surveyor approved and saved to DB." });
-  } catch (err) {
-    console.error("Approval error:", err);
-    return res.status(500).json({ message: "Failed to approve surveyor." });
-  }
-});
-
-/**
- * ADMIN: Reject surveyor
- */
-router.post("/admin/reject-surveyor", async (req, res) => {
-  const { email } = req.body;
-
-  if (!tempUsers.has(email)) {
-    return res.status(404).json({ message: "Surveyor not found or already handled." });
-  }
-
-  tempUsers.delete(email);
-  return res.status(200).json({ message: "Surveyor rejected and removed from temp store." });
-});
 
 module.exports = router;
