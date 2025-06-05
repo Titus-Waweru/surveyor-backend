@@ -59,8 +59,6 @@ router.post("/signup", async (req, res) => {
 });
 
 // =================== BOOKINGS ===================
-
-// GET all bookings
 router.get("/bookings/all", async (req, res) => {
   try {
     const bookings = await prisma.booking.findMany({
@@ -74,7 +72,6 @@ router.get("/bookings/all", async (req, res) => {
   }
 });
 
-// Assign surveyor to a booking
 router.patch("/bookings/:id/assign", async (req, res) => {
   const { id } = req.params;
   const { surveyorId } = req.body;
@@ -96,8 +93,6 @@ router.patch("/bookings/:id/assign", async (req, res) => {
 });
 
 // =================== SURVEYORS ===================
-
-// Get all surveyors
 router.get("/users/surveyors", async (req, res) => {
   try {
     const surveyors = await prisma.user.findMany({
@@ -111,7 +106,6 @@ router.get("/users/surveyors", async (req, res) => {
   }
 });
 
-// Get pending surveyors
 router.get("/pending-surveyors", async (req, res) => {
   try {
     const pending = await prisma.user.findMany({
@@ -132,7 +126,6 @@ router.get("/pending-surveyors", async (req, res) => {
   }
 });
 
-// Approve surveyor
 router.patch("/approve/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
@@ -144,7 +137,6 @@ router.patch("/approve/:id", async (req, res) => {
   }
 });
 
-// Reject surveyor
 router.patch("/reject/:id", async (req, res) => {
   const id = parseInt(req.params.id);
   try {
@@ -156,9 +148,29 @@ router.patch("/reject/:id", async (req, res) => {
   }
 });
 
-// =================== ADMIN PROFILE ===================
+// =================== ADMINS ===================
 
-// Get admin profile by ID
+// ✅ NEW: Get all admins
+router.get("/admins/all", async (req, res) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        profileImageUrl: true,
+      },
+    });
+    res.json(admins);
+  } catch (err) {
+    console.error("Fetch admins error:", err);
+    res.status(500).json({ message: "Failed to fetch admins." });
+  }
+});
+
+// =================== ADMIN PROFILE ===================
 router.get("/profile/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 
@@ -187,7 +199,6 @@ router.get("/profile/:id", async (req, res) => {
   }
 });
 
-// Get admin by email
 router.get("/profile-by-email", async (req, res) => {
   const { email } = req.query;
 
@@ -214,7 +225,6 @@ router.get("/profile-by-email", async (req, res) => {
   }
 });
 
-// Update profile
 router.put("/profile/:id", upload.single("profileImage"), async (req, res) => {
   const { id } = req.params;
   const { name, email, phoneNumber } = req.body;
@@ -238,7 +248,6 @@ router.put("/profile/:id", upload.single("profileImage"), async (req, res) => {
   }
 });
 
-// Update password
 router.put("/update-password/:id", async (req, res) => {
   const { id } = req.params;
   const { password } = req.body;
@@ -261,7 +270,6 @@ router.put("/update-password/:id", async (req, res) => {
   }
 });
 
-// Update notification preference
 router.put("/notification/:id", async (req, res) => {
   const { id } = req.params;
   const { notificationsEnabled } = req.body;
@@ -279,7 +287,6 @@ router.put("/notification/:id", async (req, res) => {
   }
 });
 
-// Delete admin account
 router.delete("/delete/:id", async (req, res) => {
   const id = parseInt(req.params.id);
 

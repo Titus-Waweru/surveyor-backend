@@ -4,17 +4,15 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const { PrismaClient } = require("@prisma/client");
 const { sendOTP } = require("../utils/mailer");
-
-// 🔽 Cloudinary setup
 const { storage } = require("../utils/cloudinary");
-const upload = multer({ storage });
 
+const upload = multer({ storage });
 const router = express.Router();
 const prisma = new PrismaClient();
-const tempUsers = new Map(); // Holds temp user data until OTP is verified
+const tempUsers = new Map(); // Memory store for pending signups
 
 /**
- * SIGNUP - Store temp user in memory and send OTP
+ * SIGNUP - Store user temporarily & send OTP
  */
 router.post(
   "/signup",
@@ -42,7 +40,7 @@ router.post(
 
       const hashedPassword = await bcrypt.hash(password, 10);
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
-      const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000); // 3 minutes
+      const otpExpiresAt = new Date(Date.now() + 3 * 60 * 1000);
 
       const tempUserData = {
         name,
@@ -94,8 +92,18 @@ router.post("/verify-otp", async (req, res) => {
 
   try {
     const { otp, otpExpiresAt, ...userData } = tempUser;
-    const newUser = await prisma.user.create({ data: userData });
 
+    if (userData.role === "surveyor") {
+      // Surveyor not saved to DB yet — awaiting admin approval
+      tempUsers.set(email, userData);
+      return res.status(200).json({
+        message: "✅ OTP verified. Awaiting admin approval.",
+        role: userData.role,
+      });
+    }
+
+    // Others are saved immediately
+    const newUser = await prisma.user.create({ data: userData });
     tempUsers.delete(email);
 
     return res.status(201).json({
@@ -136,7 +144,7 @@ router.post("/resend-otp", async (req, res) => {
 });
 
 /**
- * LOGIN (Always issues a 30-day token)
+ * LOGIN
  */
 router.post("/login", async (req, res) => {
   const { email, password } = req.body;
@@ -164,7 +172,7 @@ router.post("/login", async (req, res) => {
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
-      console.error("❌ JWT_SECRET is not defined in environment variables.");
+      console.error("❌ JWT_SECRET is not defined.");
       return res.status(500).json({ message: "Server misconfiguration." });
     }
 
@@ -191,8 +199,43 @@ router.post("/login", async (req, res) => {
  * LOGOUT
  */
 router.post("/logout", (req, res) => {
-  // If using cookies, you'd clear them here. Otherwise just respond OK.
   return res.status(200).json({ message: "Logged out successfully." });
+});
+
+/**
+ * ADMIN: Approve surveyor
+ */
+router.post("/admin/approve-surveyor", async (req, res) => {
+  const { email } = req.body;
+  const tempUser = tempUsers.get(email);
+
+  if (!tempUser || tempUser.role !== "surveyor") {
+    return res.status(404).json({ message: "Surveyor not found or already handled." });
+  }
+
+  try {
+    const newUser = await prisma.user.create({ data: tempUser });
+    tempUsers.delete(email);
+
+    return res.status(201).json({ message: "Surveyor approved and saved to DB." });
+  } catch (err) {
+    console.error("Approval error:", err);
+    return res.status(500).json({ message: "Failed to approve surveyor." });
+  }
+});
+
+/**
+ * ADMIN: Reject surveyor
+ */
+router.post("/admin/reject-surveyor", async (req, res) => {
+  const { email } = req.body;
+
+  if (!tempUsers.has(email)) {
+    return res.status(404).json({ message: "Surveyor not found or already handled." });
+  }
+
+  tempUsers.delete(email);
+  return res.status(200).json({ message: "Surveyor rejected and removed from temp store." });
 });
 
 module.exports = router;
