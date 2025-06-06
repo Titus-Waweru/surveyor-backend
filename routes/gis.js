@@ -42,4 +42,34 @@ router.post("/signup", async (req, res) => {
   }
 });
 
+// =================== GIS EXPERT DASHBOARD ===================
+router.get("/dashboard", async (req, res) => {
+  const email = req.query.email;
+  if (!email) return res.status(400).json({ message: "Email is required." });
+
+  try {
+    // Find GIS Expert user by email
+    const gisExpert = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (!gisExpert || gisExpert.role !== "gis-expert") {
+      return res.status(404).json({ message: "GIS Expert not found." });
+    }
+
+    // Example dashboard data
+    const dashboardData = {
+      gisExpertName: gisExpert.name,
+      email: gisExpert.email,
+      status: gisExpert.status,
+      // Add other info like assignments, stats, bookings if you have those relations
+    };
+
+    res.json(dashboardData);
+  } catch (err) {
+    console.error("GIS Dashboard fetch error:", err);
+    res.status(500).json({ message: "Failed to fetch GIS dashboard data." });
+  }
+});
+
 module.exports = router;
