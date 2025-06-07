@@ -29,6 +29,10 @@ model User {
   otp                  String? // Email OTP (optional)
   paid                 Boolean @default(false) // For surveyor access
 
+ // NEW FIELDS for reset password
+  resetToken           String?   // Token for password reset
+  resetTokenExpiry     DateTime? // Expiry date-time of the reset token
+
   // Relations
   bookings         Booking[] // Client bookings
   surveyorBookings Booking[] @relation("SurveyorBookings") // Bookings assigned to surveyors

@@ -2,8 +2,9 @@ const express = require("express");
 const multer = require("multer");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 const { PrismaClient } = require("@prisma/client");
-const { sendOTP } = require("../utils/mailer");
+const { sendOTP, sendPasswordResetEmail } = require("../utils/mailer");
 const { storage } = require("../utils/cloudinary");
 
 const upload = multer({ storage });
@@ -34,7 +35,7 @@ router.post(
         (!idCardFile || !certFile || !iskNumber?.trim())
       ) {
         return res.status(400).json({
-          message: `${role === 'surveyor' ? 'Surveyors' : 'GIS Experts'} must upload ID card, certificate, and ISK number.`,
+          message: `${role === "surveyor" ? "Surveyors" : "GIS Experts"} must upload ID card, certificate, and ISK number.`,
         });
       }
 
@@ -49,11 +50,11 @@ router.post(
         role,
         otp,
         otpExpiresAt,
-        iskNumber: (role === "surveyor" || role === "gis-expert") ? iskNumber.trim() : null,
+        iskNumber: role === "surveyor" || role === "gis-expert" ? iskNumber.trim() : null,
         idCardUrl: idCardFile ? idCardFile.path : null,
         certUrl: certFile ? certFile.path : null,
-        status: (role === "surveyor" || role === "gis-expert") ? "pending" : "approved",
-        paid: (role === "surveyor" || role === "gis-expert") ? false : true,
+        status: role === "surveyor" || role === "gis-expert" ? "pending" : "approved",
+        paid: role === "surveyor" || role === "gis-expert" ? false : true,
       };
 
       tempUsers.set(email, tempUserData);
@@ -165,7 +166,7 @@ router.post("/login", async (req, res) => {
 
     if ((user.role === "surveyor" || user.role === "gis-expert") && user.status !== "approved") {
       return res.status(403).json({
-        message: `${user.role === 'surveyor' ? 'Surveyor' : 'GIS Expert'} not approved yet. We’ll notify you after review.`,
+        message: `${user.role === "surveyor" ? "Surveyor" : "GIS Expert"} not approved yet. We’ll notify you after review.`,
       });
     }
 
@@ -199,6 +200,89 @@ router.post("/login", async (req, res) => {
  */
 router.post("/logout", (req, res) => {
   return res.status(200).json({ message: "Logged out successfully." });
+});
+
+/**
+ * REQUEST PASSWORD RESET
+ * Generates a reset token, stores in DB, emails user a link
+ */
+router.post("/request-password-reset", async (req, res) => {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({ message: "Email is required." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (!user) {
+      // To prevent email enumeration, respond with success anyway
+      return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+    }
+
+    // Generate secure random token
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+
+    // Save token & expiry in DB for the user
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetToken,
+        resetTokenExpires,
+      },
+    });
+
+    // Send password reset email with token (link)
+    await sendPasswordResetEmail(email, resetToken);
+
+    return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+  } catch (err) {
+    console.error("Request password reset error:", err);
+    return res.status(500).json({ message: "Server error during password reset request." });
+  }
+});
+
+/**
+ * RESET PASSWORD
+ * Verify token & expiry, update password
+ */
+router.post("/reset-password", async (req, res) => {
+  const { email, token, newPassword } = req.body;
+
+  if (!email || !token || !newPassword) {
+    return res.status(400).json({ message: "Email, token, and new password are required." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { email } });
+    if (
+      !user ||
+      !user.resetToken ||
+      user.resetToken !== token ||
+      !user.resetTokenExpires ||
+      new Date() > new Date(user.resetTokenExpires)
+    ) {
+      return res.status(400).json({ message: "Invalid or expired reset token." });
+    }
+
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    // Update password and clear reset token & expiry
+    await prisma.user.update({
+      where: { email },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpires: null,
+      },
+    });
+
+    return res.status(200).json({ message: "Password reset successful. You can now log in." });
+  } catch (err) {
+    console.error("Reset password error:", err);
+    return res.status(500).json({ message: "Server error during password reset." });
+  }
 });
 
 module.exports = router;
