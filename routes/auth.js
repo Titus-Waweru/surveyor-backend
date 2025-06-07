@@ -95,20 +95,25 @@ router.post("/verify-otp", async (req, res) => {
     const { otp, otpExpiresAt, ...userData } = tempUser;
 
     if (userData.role === "surveyor" || userData.role === "gis-expert") {
-      // Not saved to DB yet — awaiting admin approval
-      tempUsers.set(email, userData);
-      return res.status(200).json({
+      // Save the user now with status "pending"
+      const newUser = await prisma.user.create({ data: userData });
+      tempUsers.delete(email);
+
+      return res.status(201).json({
         message: "✅ OTP verified. Awaiting admin approval.",
-        role: userData.role,
+        role: newUser.role,
+        status: newUser.status,
       });
     }
 
+    // For other roles, save immediately and approve
     const newUser = await prisma.user.create({ data: userData });
     tempUsers.delete(email);
 
     return res.status(201).json({
       message: "✅ OTP verified. Signup completed.",
       role: newUser.role,
+      status: newUser.status,
     });
   } catch (err) {
     console.error("OTP verification error:", err);
