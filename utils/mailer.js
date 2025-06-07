@@ -55,9 +55,11 @@ LandLink Ltd
   return transporter.sendMail(mailOptions);
 }
 
+
 // ✅ Password Reset Email
 async function sendPasswordResetEmail(toEmail, token) {
-  const resetLink = `https://landlink.co.ke/reset-password?token=${token}`;
+  // Include email in query params, properly encoded
+  const resetLink = `https://landlink.co.ke/reset-password?email=${encodeURIComponent(toEmail)}&token=${encodeURIComponent(token)}`;
 
   const mailOptions = {
     from: `"LandLink Ltd" <${process.env.EMAIL_USERNAME}>`,
@@ -105,5 +107,6 @@ LandLink Ltd
 
   return transporter.sendMail(mailOptions);
 }
+
 
 module.exports = { sendOTP, sendPasswordResetEmail };
