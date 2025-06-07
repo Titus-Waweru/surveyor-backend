@@ -222,14 +222,14 @@ router.post("/request-password-reset", async (req, res) => {
 
     // Generate secure random token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
+    const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour expiry
 
     // Save token & expiry in DB for the user
     await prisma.user.update({
       where: { email },
       data: {
         resetToken,
-        resetTokenExpires,
+        resetTokenExpiry,
       },
     });
 
@@ -260,8 +260,8 @@ router.post("/reset-password", async (req, res) => {
       !user ||
       !user.resetToken ||
       user.resetToken !== token ||
-      !user.resetTokenExpires ||
-      new Date() > new Date(user.resetTokenExpires)
+      !user.resetTokenExpiry ||
+      new Date() > new Date(user.resetTokenExpiry)
     ) {
       return res.status(400).json({ message: "Invalid or expired reset token." });
     }
@@ -274,7 +274,7 @@ router.post("/reset-password", async (req, res) => {
       data: {
         password: hashedPassword,
         resetToken: null,
-        resetTokenExpires: null,
+        resetTokenExpiry: null,
       },
     });
 
