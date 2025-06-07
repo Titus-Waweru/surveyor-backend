@@ -7,6 +7,7 @@ const router = express.Router();
 const prisma = new PrismaClient();
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const CLIENT_URL = process.env.CLIENT_URL;
 
 // Request password reset
 router.post("/request-password-reset", async (req, res) => {
@@ -18,16 +19,24 @@ router.post("/request-password-reset", async (req, res) => {
     if (!user) {
       return res.status(200).json({
         message: "If that email exists, a password reset link has been sent.",
-      }); // generic for security
+      });
     }
 
-    const token = jwt.sign({ email }, JWT_SECRET, { expiresIn: "10m" });
-    const resetLink = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+    const resetToken = jwt.sign({ email }, JWT_SECRET, { expiresIn: "10m" });
+    const resetTokenExpiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes from now
 
-    // You should send an actual email here (use your mailer utility)
+    await prisma.user.update({
+      where: { email },
+      data: {
+        resetToken,
+        resetTokenExpiry,
+      },
+    });
+
+    const resetLink = `${CLIENT_URL}/reset-password?token=${resetToken}`;
     console.log(`🔗 Reset link (DEV ONLY): ${resetLink}`);
 
-    // Example: await sendResetEmail(email, resetLink);
+    // TODO: Send resetLink via email using Nodemailer, Resend, etc.
 
     return res.json({
       message: "Reset link sent. Please check your email.",
@@ -47,11 +56,27 @@ router.post("/reset-password", async (req, res) => {
 
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
+
+    const user = await prisma.user.findUnique({ where: { email: decoded.email } });
+
+    if (
+      !user ||
+      user.resetToken !== token ||
+      !user.resetTokenExpiry ||
+      user.resetTokenExpiry < new Date()
+    ) {
+      return res.status(400).json({ message: "Invalid or expired reset token." });
+    }
+
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     await prisma.user.update({
       where: { email: decoded.email },
-      data: { password: hashedPassword },
+      data: {
+        password: hashedPassword,
+        resetToken: null,
+        resetTokenExpiry: null,
+      },
     });
 
     return res.json({ message: "✅ Password reset successful." });
