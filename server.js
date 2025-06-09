@@ -14,6 +14,8 @@ const adminRoutes = require("./routes/admin");
 const paymentRoutes = require("./routes/payment");
 const demoRoutes = require("./routes/demo");
 const gisRoutes = require("./routes/gis"); // ✅ GIS Expert route
+const pingRoute = require("./routes/ping");
+
 
 const app = express();
 
@@ -58,6 +60,8 @@ app.use("/api/admin", adminRoutes);
 app.use("/api/payment", paymentRoutes);
 app.use("/api/demo", demoRoutes);
 app.use("/api/gis", gisRoutes);
+app.use("/api", pingRoute);
+
 
 // ✅ Catch-all 404
 app.use((req, res) => {
