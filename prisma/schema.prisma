@@ -29,13 +29,17 @@ model User {
   otp                  String? // Email OTP (optional)
   paid                 Boolean @default(false) // For surveyor access
 
- // NEW FIELDS for reset password
-  resetToken           String?   // Token for password reset
-  resetTokenExpiry     DateTime? // Expiry date-time of the reset token
+  // NEW FIELDS for reset password
+  resetToken       String? // Token for password reset
+  resetTokenExpiry DateTime? // Expiry date-time of the reset token
 
   // Relations
   bookings         Booking[] // Client bookings
   surveyorBookings Booking[] @relation("SurveyorBookings") // Bookings assigned to surveyors
+
+  // GIS assignments relations (added)
+  gisAssignments       GisAssignment[] @relation("UserGisAssignments")
+  gisExpertAssignments GisAssignment[] @relation("GisExpertAssignments")
 }
 
 // ===========================
@@ -87,4 +91,21 @@ model Payment {
   status    String
   reference String
   createdAt DateTime @default(now())
+}
+
+// ===========================
+// MODEL GIS ASSIGNMENTS
+// ===========================
+model GisAssignment {
+  id          Int      @id @default(autoincrement())
+  location    String
+  description String?
+  status      String   @default("pending")
+  createdAt   DateTime @default(now())
+
+  userId Int
+  user   User @relation("UserGisAssignments", fields: [userId], references: [id])
+
+  assignedGisExpertId Int?
+  assignedGisExpert   User? @relation("GisExpertAssignments", fields: [assignedGisExpertId], references: [id])
 }
