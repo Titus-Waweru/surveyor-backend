@@ -47,7 +47,7 @@ router.get("/assignments", async (req, res) => {
 
   try {
     const gisExpert = await prisma.user.findUnique({ where: { email } });
-    if (!gisExpert || gisExpert.role !== "gis-expert") {
+    if (!gisExpert || gisExpert.role !== "gis") {
       return res.status(403).json({ message: "Unauthorized or user not a GIS Expert." });
     }
 

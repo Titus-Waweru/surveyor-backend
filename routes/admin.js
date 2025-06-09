@@ -126,25 +126,82 @@ router.get("/pending-surveyors", async (req, res) => {
   }
 });
 
+// =================== GIS EXPERTS (NEW) ===================
+router.get("/users/gis-experts", async (req, res) => {
+  try {
+    const gisExperts = await prisma.user.findMany({
+      where: { role: "gis-expert" },
+      select: { id: true, name: true, email: true, status: true },
+    });
+    res.json(gisExperts);
+  } catch (err) {
+    console.error("Fetch GIS experts error:", err);
+    res.status(500).json({ message: "Failed to fetch GIS experts." });
+  }
+});
+
+router.get("/pending-gis-experts", async (req, res) => {
+  try {
+    const pendingGIS = await prisma.user.findMany({
+      where: { role: "gis-expert", status: "pending" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        iskNumber: true,
+        idCardUrl: true,
+        certUrl: true,
+      },
+    });
+    res.json(pendingGIS);
+  } catch (err) {
+    console.error("Pending GIS experts error:", err);
+    res.status(500).json({ message: "Failed to load pending GIS experts." });
+  }
+});
+
+// =================== APPROVE / REJECT (UPDATED) ===================
 router.patch("/approve/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  const role = req.query.role || "surveyor";
+
+  if (!["surveyor", "gis-expert"].includes(role)) {
+    return res.status(400).json({ message: "Invalid role for approval." });
+  }
+
   try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || user.role !== role) {
+      return res.status(404).json({ message: `${role} not found.` });
+    }
+
     await prisma.user.update({ where: { id }, data: { status: "approved" } });
-    res.json({ message: "Surveyor approved." });
+    res.json({ message: `${role.charAt(0).toUpperCase() + role.slice(1)} approved.` });
   } catch (err) {
     console.error("Approval error:", err);
-    res.status(500).json({ message: "Could not approve surveyor." });
+    res.status(500).json({ message: `Could not approve ${role}.` });
   }
 });
 
 router.patch("/reject/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  const role = req.query.role || "surveyor";
+
+  if (!["surveyor", "gis-expert"].includes(role)) {
+    return res.status(400).json({ message: "Invalid role for rejection." });
+  }
+
   try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || user.role !== role) {
+      return res.status(404).json({ message: `${role} not found.` });
+    }
+
     await prisma.user.update({ where: { id }, data: { status: "rejected" } });
-    res.json({ message: "Surveyor rejected." });
+    res.json({ message: `${role.charAt(0).toUpperCase() + role.slice(1)} rejected.` });
   } catch (err) {
     console.error("Rejection error:", err);
-    res.status(500).json({ message: "Could not reject surveyor." });
+    res.status(500).json({ message: `Could not reject ${role}.` });
   }
 });
 
@@ -243,65 +300,38 @@ router.put("/profile/:id", upload.single("profileImage"), async (req, res) => {
 
     res.json(updated);
   } catch (err) {
-    console.error("Profile update error:", err);
+    console.error("Update profile error:", err);
     res.status(500).json({ message: "Failed to update profile." });
   }
 });
 
-router.put("/update-password/:id", async (req, res) => {
-  const { id } = req.params;
-  const { password } = req.body;
-
-  if (!password) {
-    return res.status(400).json({ message: "Password is required." });
-  }
-
-  try {
-    const hashed = await bcrypt.hash(password, 10);
-    await prisma.user.update({
-      where: { id: parseInt(id) },
-      data: { password: hashed },
-    });
-
-    res.json({ message: "Password updated successfully." });
-  } catch (err) {
-    console.error("Password update error:", err);
-    res.status(500).json({ message: "Failed to update password." });
-  }
-});
-
-router.put("/notification/:id", async (req, res) => {
-  const { id } = req.params;
-  const { notificationsEnabled } = req.body;
-
-  try {
-    await prisma.user.update({
-      where: { id: parseInt(id) },
-      data: { notificationsEnabled: notificationsEnabled ?? true },
-    });
-
-    res.json({ message: "Notification preference updated." });
-  } catch (err) {
-    console.error("Notification update error:", err);
-    res.status(500).json({ message: "Failed to update notification." });
-  }
-});
-
-router.delete("/delete/:id", async (req, res) => {
+// =================== CHANGE PASSWORD ===================
+router.put("/change-password/:id", async (req, res) => {
   const id = parseInt(req.params.id);
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ message: "Old and new passwords are required." });
+  }
 
   try {
-    const admin = await prisma.user.findUnique({ where: { id } });
-
-    if (!admin || admin.role !== "admin") {
-      return res.status(403).json({ message: "Access denied. Not an admin." });
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
     }
 
-    await prisma.user.delete({ where: { id } });
-    res.json({ message: "Admin account deleted successfully." });
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(403).json({ message: "Old password is incorrect." });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id }, data: { password: hashedNew } });
+
+    res.json({ message: "Password changed successfully." });
   } catch (err) {
-    console.error("Delete error:", err);
-    res.status(500).json({ message: "Failed to delete admin account." });
+    console.error("Change password error:", err);
+    res.status(500).json({ message: "Failed to change password." });
   }
 });
 
