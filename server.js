@@ -57,7 +57,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api", dashboardRoutes);
 app.use("/api/surveyor", surveyorRoutes);
 app.use("/api/admin", adminRoutes);
-app.use("/api/payments", paymentRoutes);
+app.use("/api/payment", paymentRoutes);
 app.use("/api/demo", demoRoutes);
 app.use("/api/gis", gisRoutes);
 app.use("/api", pingRoute);
