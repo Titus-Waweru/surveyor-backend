@@ -23,7 +23,7 @@ router.post("/initiate", async (req, res) => {
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: Math.floor(amount * 100), // Paystack uses kobo
+        amount: Math.floor(amount * 100), // Paystack expects amount in kobo (smallest currency unit)
       },
       {
         headers: {
@@ -34,12 +34,13 @@ router.post("/initiate", async (req, res) => {
     );
 
     const paymentData = paystackRes.data?.data;
+    console.log("Paystack paymentData:", paymentData);
 
     if (paymentData) {
       await prisma.payment.create({
         data: {
           email,
-          amount: paymentData.amount,
+          amount: Math.floor(amount * 100), // Save amount as integer in kobo
           method: "paystack",
           status: "pending",
           reference: paymentData.reference,
