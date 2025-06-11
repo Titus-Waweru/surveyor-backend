@@ -40,6 +40,9 @@ model User {
   // GIS assignments relations (added)
   gisAssignments       GisAssignment[] @relation("UserGisAssignments")
   gisExpertAssignments GisAssignment[] @relation("GisExpertAssignments")
+
+  // Review relation (new)
+  reviews Review[]
 }
 
 // ===========================
@@ -64,6 +67,9 @@ model Booking {
   // Optional relation to surveyor user
   assignedSurveyorId Int?
   assignedSurveyor   User? @relation("SurveyorBookings", fields: [assignedSurveyorId], references: [id])
+
+  // Review relation (new)
+  reviews Review[]
 }
 
 // ===========================
@@ -82,7 +88,6 @@ model DemoBooking {
 // ===========================
 // MODEL PAYMENT
 // ===========================
-
 model Payment {
   id        String   @id @default(cuid())
   email     String
@@ -108,4 +113,20 @@ model GisAssignment {
 
   assignedGisExpertId Int?
   assignedGisExpert   User? @relation("GisExpertAssignments", fields: [assignedGisExpertId], references: [id])
+}
+
+// ===========================
+// MODEL REVIEW
+// ===========================
+model Review {
+  id        Int      @id @default(autoincrement())
+  rating    Int      @default(5)
+  comment   String
+  createdAt DateTime @default(now())
+
+  // Relations
+  userId    Int
+  user      User    @relation(fields: [userId], references: [id])
+  bookingId Int
+  booking   Booking @relation(fields: [bookingId], references: [id])
 }
