@@ -1,7 +1,8 @@
-import express from "express";
-import prisma from "../prismaClient.js"; // adjust path if needed
+const express = require("express");
+const { PrismaClient } = require("@prisma/client");
 
 const router = express.Router();
+const prisma = new PrismaClient();
 
 // Create a new review
 router.post("/", async (req, res) => {
@@ -14,8 +15,8 @@ router.post("/", async (req, res) => {
 
     const newReview = await prisma.review.create({
       data: {
-        bookingId,
-        userId,
+        bookingId: Number(bookingId),
+        userId: Number(userId),
         rating,
         comment,
       },
@@ -45,4 +46,4 @@ router.get("/booking/:bookingId", async (req, res) => {
   }
 });
 
-export default router;
+module.exports = router;
