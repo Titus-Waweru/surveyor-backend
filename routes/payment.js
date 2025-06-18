@@ -4,7 +4,7 @@ const { PrismaClient } = require("@prisma/client");
 const router = express.Router();
 const prisma = new PrismaClient();
 
-// PAYSTACK INITIATION
+// ───────────── PAYSTACK INITIATION ─────────────
 router.post("/initiate", async (req, res) => {
   const { email, amount } = req.body;
 
@@ -23,7 +23,7 @@ router.post("/initiate", async (req, res) => {
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: Math.floor(amount * 100), // Paystack expects amount in kobo (smallest currency unit)
+        amount: Math.floor(amount * 100), // Paystack expects amount in kobo
       },
       {
         headers: {
@@ -34,13 +34,12 @@ router.post("/initiate", async (req, res) => {
     );
 
     const paymentData = paystackRes.data?.data;
-    console.log("Paystack paymentData:", paymentData);
 
     if (paymentData) {
       await prisma.payment.create({
         data: {
           email,
-          amount: Math.floor(amount * 100), // Save amount as integer in kobo
+          amount: Math.floor(amount * 100),
           method: "paystack",
           status: "pending",
           reference: paymentData.reference,
@@ -57,7 +56,7 @@ router.post("/initiate", async (req, res) => {
   }
 });
 
-// MPESA INITIATION
+// ───────────── MPESA INITIATION ─────────────
 router.post("/mpesa", async (req, res) => {
   const { phone, amount } = req.body;
 
@@ -72,20 +71,11 @@ router.post("/mpesa", async (req, res) => {
 
     const tokenRes = await axios.get(
       "https://sandbox.safaricom.co.ke/oauth/v1/generate?grant_type=client_credentials",
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-        },
-      }
+      { headers: { Authorization: `Basic ${auth}` } }
     );
 
     const accessToken = tokenRes.data.access_token;
-
-    const timestamp = new Date()
-      .toISOString()
-      .replace(/[^0-9]/g, "")
-      .slice(0, 14);
-
+    const timestamp = new Date().toISOString().replace(/[^0-9]/g, "").slice(0, 14);
     const password = Buffer.from(
       `${process.env.MPESA_SHORTCODE}${process.env.MPESA_PASSKEY}${timestamp}`
     ).toString("base64");
@@ -117,7 +107,7 @@ router.post("/mpesa", async (req, res) => {
 
     await prisma.payment.create({
       data: {
-        email: phone, // For M-Pesa, use phone as identifier
+        email: phone,
         amount,
         method: "mpesa",
         status: "pending",
@@ -132,7 +122,7 @@ router.post("/mpesa", async (req, res) => {
   }
 });
 
-// MPESA CALLBACK
+// ───────────── MPESA CALLBACK ─────────────
 router.post("/mpesa/callback", async (req, res) => {
   const stkCallback = req.body?.Body?.stkCallback;
   if (!stkCallback) return res.sendStatus(400);
@@ -141,12 +131,8 @@ router.post("/mpesa/callback", async (req, res) => {
 
   try {
     await prisma.payment.updateMany({
-      where: {
-        reference: CheckoutRequestID,
-      },
-      data: {
-        status: ResultCode === 0 ? "success" : "failed",
-      },
+      where: { reference: CheckoutRequestID },
+      data: { status: ResultCode === 0 ? "success" : "failed" },
     });
 
     res.status(200).json({ message: "Callback processed" });
@@ -156,7 +142,7 @@ router.post("/mpesa/callback", async (req, res) => {
   }
 });
 
-// GET PAYMENTS BY EMAIL
+// ───────────── GET PAYMENTS BY EMAIL ─────────────
 router.get("/", async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ error: "Missing email" });
@@ -164,18 +150,33 @@ router.get("/", async (req, res) => {
   try {
     const payments = await prisma.payment.findMany({
       where: {
-        OR: [
-          { email },
-          { email: { equals: email, mode: "insensitive" } },
-        ],
+        OR: [{ email }, { email: { equals: email, mode: "insensitive" } }],
       },
       orderBy: { createdAt: "desc" },
     });
-
     res.json({ payments });
   } catch (err) {
     console.error("Fetch payments error:", err.message);
     res.status(500).json({ error: "Could not fetch payments" });
+  }
+});
+
+// ───────────── NEW: GET PAYMENT HISTORY (alias) ─────────────
+router.get("/history", async (req, res) => {
+  const { email } = req.query;
+  if (!email) return res.status(400).json({ error: "Missing email" });
+
+  try {
+    const payments = await prisma.payment.findMany({
+      where: {
+        OR: [{ email }, { email: { equals: email, mode: "insensitive" } }],
+      },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json({ payments });
+  } catch (err) {
+    console.error("Fetch payment history error:", err.message);
+    res.status(500).json({ error: "Could not fetch payment history" });
   }
 });
 
