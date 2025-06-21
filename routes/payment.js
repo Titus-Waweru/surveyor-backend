@@ -6,7 +6,7 @@ const prisma = new PrismaClient();
 
 // ───────────── PAYSTACK INITIATION ─────────────
 router.post("/initiate", async (req, res) => {
-  const { email, amount } = req.body;
+  const { email, amount, bookingId } = req.body; // ✅ Updated
 
   if (!email || !amount) {
     return res.status(400).json({ error: "Missing email or amount" });
@@ -23,7 +23,7 @@ router.post("/initiate", async (req, res) => {
       "https://api.paystack.co/transaction/initialize",
       {
         email,
-        amount: Math.floor(amount * 100), // Paystack expects amount in kobo
+        amount: Math.floor(amount * 100),
       },
       {
         headers: {
@@ -43,6 +43,7 @@ router.post("/initiate", async (req, res) => {
           method: "paystack",
           status: "pending",
           reference: paymentData.reference,
+          booking: bookingId ? { connect: { id: bookingId } } : undefined, // ✅ New line
         },
       });
 
@@ -58,7 +59,7 @@ router.post("/initiate", async (req, res) => {
 
 // ───────────── MPESA INITIATION ─────────────
 router.post("/mpesa", async (req, res) => {
-  const { phone, amount } = req.body;
+  const { phone, amount, bookingId } = req.body; // ✅ Updated
 
   if (!phone || !amount) {
     return res.status(400).json({ error: "Phone and amount are required" });
@@ -112,6 +113,7 @@ router.post("/mpesa", async (req, res) => {
         method: "mpesa",
         status: "pending",
         reference: checkoutRequestID,
+        booking: bookingId ? { connect: { id: bookingId } } : undefined, // ✅ New line
       },
     });
 

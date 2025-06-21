@@ -18,35 +18,31 @@ model User {
   name                 String
   email                String  @unique
   password             String
-  phoneNumber          String? // Optional phone number
+  phoneNumber          String?
   notificationsEnabled Boolean @default(true)
-  profileImageUrl      String? // Optional profile image URL
-  role                 String // 'admin' | 'surveyor' | 'client'
-  status               String  @default("pending") // 'pending' | 'approved' | 'rejected'
-  iskNumber            String? // Surveyor ISK number (optional)
-  idCardUrl            String? // Surveyor ID Card upload (optional)
-  certUrl              String? // Surveyor Certificate upload (optional)
-  otp                  String? // Email OTP (optional)
-  paid                 Boolean @default(false) // For surveyor access
+  profileImageUrl      String?
+  role                 String
+  status               String  @default("pending")
+  iskNumber            String?
+  idCardUrl            String?
+  certUrl              String?
+  otp                  String?
+  paid                 Boolean @default(false)
 
-  // NEW FIELDS for reset password
-  resetToken       String? // Token for password reset
-  resetTokenExpiry DateTime? // Expiry date-time of the reset token
+  // Reset‑password fields
+  resetToken       String?
+  resetTokenExpiry DateTime?
 
   // Relations
-  bookings         Booking[] // Client bookings
-  surveyorBookings Booking[] @relation("SurveyorBookings") // Bookings assigned to surveyors
-
-  // GIS assignments relations (added)
-  gisAssignments       GisAssignment[] @relation("UserGisAssignments")
-  gisExpertAssignments GisAssignment[] @relation("GisExpertAssignments")
-
-  // Review relation (new)
-  reviews Review[]
+  bookings             Booking[]
+  surveyorBookings     Booking[]        @relation("SurveyorBookings")
+  gisAssignments       GisAssignment[]  @relation("UserGisAssignments")
+  gisExpertAssignments GisAssignment[]  @relation("GisExpertAssignments")
+  reviews              Review[]
 }
 
 // ===========================
-// Booking Model
+// Booking Model  (UPDATED)
 // ===========================
 model Booking {
   id            Int      @id @default(autoincrement())
@@ -57,8 +53,8 @@ model Booking {
   status        String   @default("Pending")
   createdAt     DateTime @default(now())
 
-  latitude  Float? // Added: Latitude of the location
-  longitude Float? // Added: Longitude of the location
+  latitude  Float?
+  longitude Float?
 
   // Relation to client user
   userId Int
@@ -68,7 +64,10 @@ model Booking {
   assignedSurveyorId Int?
   assignedSurveyor   User? @relation("SurveyorBookings", fields: [assignedSurveyorId], references: [id])
 
-  // Review relation (new)
+  // NEW ⬇️ Payments linked to this booking
+  payments Payment[]
+
+  // Reviews
   reviews Review[]
 }
 
@@ -86,7 +85,7 @@ model DemoBooking {
 }
 
 // ===========================
-// MODEL PAYMENT
+// Payment Model  (UPDATED)
 // ===========================
 model Payment {
   id        String   @id @default(cuid())
@@ -96,10 +95,14 @@ model Payment {
   status    String
   reference String
   createdAt DateTime @default(now())
+
+  // NEW ⬇️ Link payment to a booking (optional so standalone payments still work)
+  bookingId Int?
+  booking   Booking? @relation(fields: [bookingId], references: [id])
 }
 
 // ===========================
-// MODEL GIS ASSIGNMENTS
+// GIS Assignment Model
 // ===========================
 model GisAssignment {
   id          Int      @id @default(autoincrement())
@@ -116,7 +119,7 @@ model GisAssignment {
 }
 
 // ===========================
-// MODEL REVIEW
+// Review Model
 // ===========================
 model Review {
   id        Int      @id @default(autoincrement())
