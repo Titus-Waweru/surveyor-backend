@@ -1,4 +1,4 @@
-import express from "express";
+const express = require("express");
 const router = express.Router();
 
 /**
@@ -42,19 +42,16 @@ router.post("/", (req, res) => {
 
   // 2. Check Survey Status
   else if (text === "2") {
-    // Here you can integrate with your database to fetch real-time survey status
     response = `END Your latest survey status: In Progress`;
   }
 
   // 3. Beacon Placement Requests
   else if (text === "3") {
-    // Could fetch pending requests count from DB
     response = `END You have 2 beacon placement requests pending.`;
   }
 
   // 4. Payments
   else if (text === "4") {
-    // Could fetch payment info from DB
     response = `END Total payments received: KSh 45,000`;
   }
 
@@ -72,4 +69,5 @@ router.post("/", (req, res) => {
   res.send(response);
 });
 
-export default router;
+// ✅ Export using CommonJS
+module.exports = router;
