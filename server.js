@@ -15,8 +15,8 @@ const paymentRoutes = require("./routes/payment");
 const demoRoutes = require("./routes/demo");
 const gisRoutes = require("./routes/gis");
 const pingRoute = require("./routes/ping");
-
 const reviewRoutes = require("./routes/reviews"); // <--- Added here
+const ussdRoutes = require("./routes/ussd"); // <--- Added USSD route
 
 const app = express();
 
@@ -60,6 +60,7 @@ app.use("/api/gis", gisRoutes);
 app.use("/api", pingRoute);
 
 app.use("/api/reviews", reviewRoutes); // <--- Added here
+app.use("/ussd", ussdRoutes); // <--- USSD endpoint added
 
 app.use((req, res) => {
   res.status(404).json({ message: "Route not found ❌" });
