@@ -1,238 +1,338 @@
-import { useEffect, useState } from "react";
-import axios from "axios";
-import Layout from "../components/dashboard/Layout.jsx";
+const express = require("express");
+const router = express.Router();
+const { PrismaClient } = require("@prisma/client");
+const multer = require("multer");
+const bcrypt = require("bcryptjs");
+const path = require("path");
 
-export default function AdminDashboard({ user, setUser }) {
-  const [bookings, setBookings] = useState([]);
-  const [surveyors, setSurveyors] = useState([]);
-  const [admins, setAdmins] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState("bookings");
+const prisma = new PrismaClient();
 
-  const API_BASE = import.meta.env.VITE_API_URL;
+// ====== Admin Secret Code (ENV) ======
+const ADMIN_SECRET_CODE = process.env.ADMIN_SECRET_CODE || "admin2024";
 
-  const handleLogout = () => setUser(null);
+// ===== Multer Setup for Profile Image Upload =====
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, "uploads/");
+  },
+  filename: (req, file, cb) => {
+    cb(null, `${Date.now()}-${file.originalname}`);
+  },
+});
+const upload = multer({ storage });
 
-  useEffect(() => {
-    async function fetchData() {
-      setLoading(true);
-      try {
-        const bookingsRes = await axios.get(`${API_BASE}/bookings/all`);
-        const usersRes = await axios.get(`${API_BASE}/users/surveyors`);
-        const adminsRes = await axios.get(`${API_BASE}/admins/all`); // ✅ CORRECTED ENDPOINT
-        setBookings(bookingsRes.data);
-        setSurveyors(usersRes.data);
-        setAdmins(adminsRes.data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch data.");
-      } finally {
-        setLoading(false);
-      }
+// =================== ADMIN SIGNUP ===================
+router.post("/signup", async (req, res) => {
+  const { name, email, password, secretCode } = req.body;
+
+  if (!name || !email || !password || !secretCode) {
+    return res.status(400).json({ message: "All fields are required." });
+  }
+
+  if (secretCode !== ADMIN_SECRET_CODE) {
+    return res.status(403).json({ message: "Invalid secret admin code." });
+  }
+
+  try {
+    const existingAdmin = await prisma.user.findUnique({ where: { email } });
+    if (existingAdmin) {
+      return res.status(400).json({ message: "Admin with this email already exists." });
     }
-    fetchData();
-  }, [API_BASE]);
 
-  const handleAssign = async (bookingId, surveyorId) => {
-    try {
-      await axios.patch(`${API_BASE}/bookings/${bookingId}/assign`, {
-        surveyorId,
-      });
-      setBookings((prev) =>
-        prev.map((b) =>
-          b.id === bookingId ? { ...b, assignedSurveyorId: surveyorId } : b
-        )
-      );
-    } catch (err) {
-      console.error(err);
-      alert("Failed to assign surveyor.");
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    await prisma.user.create({
+      data: {
+        name,
+        email,
+        password: hashedPassword,
+        role: "admin",
+        status: "approved",
+      },
+    });
+
+    res.status(201).json({ message: "Admin account created successfully." });
+  } catch (err) {
+    console.error("Admin signup error:", err);
+    res.status(500).json({ message: "Failed to create admin account." });
+  }
+});
+
+// =================== BOOKINGS ===================
+router.get("/bookings/all", async (req, res) => {
+  try {
+    const bookings = await prisma.booking.findMany({
+      include: { user: true },
+      orderBy: { createdAt: "desc" },
+    });
+    res.json(bookings);
+  } catch (err) {
+    console.error("Fetch bookings error:", err);
+    res.status(500).json({ message: "Failed to fetch bookings." });
+  }
+});
+
+router.patch("/bookings/:id/assign", async (req, res) => {
+  const { id } = req.params;
+  const { surveyorId } = req.body;
+
+  if (!surveyorId) {
+    return res.status(400).json({ message: "Surveyor ID is required." });
+  }
+
+  try {
+    const updated = await prisma.booking.update({
+      where: { id: parseInt(id) },
+      data: { assignedSurveyorId: parseInt(surveyorId) },
+    });
+    res.json(updated);
+  } catch (err) {
+    console.error("Assign error:", err);
+    res.status(500).json({ message: "Failed to assign surveyor." });
+  }
+});
+
+// =================== SURVEYORS ===================
+router.get("/users/surveyors", async (req, res) => {
+  try {
+    const surveyors = await prisma.user.findMany({
+      where: { role: "surveyor" },
+      select: { id: true, name: true, email: true, status: true },
+    });
+    res.json(surveyors);
+  } catch (err) {
+    console.error("Fetch surveyors error:", err);
+    res.status(500).json({ message: "Failed to fetch surveyors." });
+  }
+});
+
+router.get("/pending-surveyors", async (req, res) => {
+  try {
+    const pending = await prisma.user.findMany({
+      where: { role: "surveyor", status: "pending" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        iskNumber: true,
+        idCardUrl: true,
+        certUrl: true,
+      },
+    });
+    res.json(pending);
+  } catch (err) {
+    console.error("Pending surveyors error:", err);
+    res.status(500).json({ message: "Failed to load pending surveyors." });
+  }
+});
+
+// =================== GIS EXPERTS (NEW) ===================
+router.get("/users/gis-experts", async (req, res) => {
+  try {
+    const gisExperts = await prisma.user.findMany({
+      where: { role: "gis-expert" },
+      select: { id: true, name: true, email: true, status: true },
+    });
+    res.json(gisExperts);
+  } catch (err) {
+    console.error("Fetch GIS experts error:", err);
+    res.status(500).json({ message: "Failed to fetch GIS experts." });
+  }
+});
+
+router.get("/pending-gis-experts", async (req, res) => {
+  try {
+    const pendingGIS = await prisma.user.findMany({
+      where: { role: "gis-expert", status: "pending" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        iskNumber: true,
+        idCardUrl: true,
+        certUrl: true,
+      },
+    });
+    res.json(pendingGIS);
+  } catch (err) {
+    console.error("Pending GIS experts error:", err);
+    res.status(500).json({ message: "Failed to load pending GIS experts." });
+  }
+});
+
+// =================== APPROVE / REJECT (UPDATED) ===================
+router.patch("/approve/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const role = req.query.role || "surveyor";
+
+  if (!["surveyor", "gis-expert"].includes(role)) {
+    return res.status(400).json({ message: "Invalid role for approval." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || user.role !== role) {
+      return res.status(404).json({ message: `${role} not found.` });
     }
-  };
 
-  return (
-    <Layout user={user} onLogout={handleLogout}>
-      <h1 className="text-2xl font-bold mb-6 font-poppins">Admin Dashboard</h1>
+    await prisma.user.update({ where: { id }, data: { status: "approved" } });
+    res.json({ message: `${role.charAt(0).toUpperCase() + role.slice(1)} approved.` });
+  } catch (err) {
+    console.error("Approval error:", err);
+    res.status(500).json({ message: `Could not approve ${role}.` });
+  }
+});
 
-      {/* Tab Navigation */}
-      <div className="flex border-b border-gray-200 mb-6">
-        <button
-          className={`px-4 py-2 font-medium ${
-            activeTab === "bookings"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-          onClick={() => setActiveTab("bookings")}
-        >
-          Bookings ({bookings.length})
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${
-            activeTab === "admins"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-          onClick={() => setActiveTab("admins")}
-        >
-          Admins ({admins.length})
-        </button>
-        <button
-          className={`px-4 py-2 font-medium ${
-            activeTab === "surveyors"
-              ? "border-b-2 border-blue-500 text-blue-600"
-              : "text-gray-500 hover:text-gray-700"
-          }`}
-          onClick={() => setActiveTab("surveyors")}
-        >
-          Surveyors ({surveyors.length})
-        </button>
-      </div>
+router.patch("/reject/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const role = req.query.role || "surveyor";
 
-      {loading ? (
-        <p className="text-gray-600 font-manrope">Loading data...</p>
-      ) : error ? (
-        <p className="text-red-600 font-manrope">{error}</p>
-      ) : (
-        <>
-          {/* Bookings Tab */}
-          {activeTab === "bookings" && (
-            <div className="grid gap-4 font-manrope">
-              {bookings.length === 0 ? (
-                <p className="text-gray-600">No bookings found.</p>
-              ) : (
-                bookings.map((b) => (
-                  <div key={b.id} className="bg-white border p-4 rounded shadow">
-                    <h3 className="font-semibold">
-                      {b.surveyType} at {b.location}
-                    </h3>
-                    <p className="text-sm text-gray-600">{b.description}</p>
-                    
-                    {b.county && (
-                      <p className="text-sm mt-1">
-                        <span className="font-semibold">County:</span> {b.county} County
-                      </p>
-                    )}
-                    
-                    <p className="text-sm mt-1">Status: {b.status}</p>
-                    <p className="text-sm">Client: {b.user?.email}</p>
-                    
-                    {b.latitude && b.longitude && (
-                      <p className="text-xs text-gray-500 mt-1">
-                        Coordinates: {b.latitude?.toFixed(4)}, {b.longitude?.toFixed(4)}
-                      </p>
-                    )}
-                    
-                    <div className="mt-3">
-                      <label className="mr-2 text-sm">Assign Surveyor:</label>
-                      <select
-                        className="border rounded px-2 py-1"
-                        value={b.assignedSurveyorId || ""}
-                        onChange={(e) => handleAssign(b.id, parseInt(e.target.value))}
-                      >
-                        <option value="">-- Select --</option>
-                        {surveyors.map((s) => (
-                          <option key={s.id} value={s.id}>
-                            {s.name} ({s.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-          )}
+  if (!["surveyor", "gis-expert"].includes(role)) {
+    return res.status(400).json({ message: "Invalid role for rejection." });
+  }
 
-          {/* Admins Tab */}
-          {activeTab === "admins" && (
-            <div className="bg-white border rounded-lg shadow">
-              <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">Registered Administrators</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Total {admins.length} admin{admins.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="divide-y">
-                {admins.length === 0 ? (
-                  <p className="p-4 text-gray-600">No administrators found.</p>
-                ) : (
-                  admins.map((admin) => (
-                    <div key={admin.id} className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center space-x-3">
-                          {admin.profileImageUrl ? (
-                            <img 
-                              src={admin.profileImageUrl} 
-                              alt={admin.name}
-                              className="w-10 h-10 rounded-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                              <span className="text-blue-600 font-semibold text-sm">
-                                {admin.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          )}
-                          <div>
-                            <h3 className="font-semibold">{admin.name}</h3>
-                            <p className="text-sm text-gray-600">{admin.email}</p>
-                            {admin.phoneNumber && (
-                              <p className="text-xs text-gray-500">Phone: {admin.phoneNumber}</p>
-                            )}
-                          </div>
-                        </div>
-                        <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                          Admin
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user || user.role !== role) {
+      return res.status(404).json({ message: `${role} not found.` });
+    }
 
-          {/* Surveyors Tab */}
-          {activeTab === "surveyors" && (
-            <div className="bg-white border rounded-lg shadow">
-              <div className="p-4 border-b">
-                <h2 className="text-lg font-semibold">Registered Surveyors</h2>
-                <p className="text-sm text-gray-600 mt-1">
-                  Total {surveyors.length} surveyor{surveyors.length !== 1 ? 's' : ''}
-                </p>
-              </div>
-              <div className="divide-y">
-                {surveyors.length === 0 ? (
-                  <p className="p-4 text-gray-600">No surveyors found.</p>
-                ) : (
-                  surveyors.map((surveyor) => (
-                    <div key={surveyor.id} className="p-4">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <h3 className="font-semibold">{surveyor.name}</h3>
-                          <p className="text-sm text-gray-600">{surveyor.email}</p>
-                          <p className="text-xs text-gray-500">
-                            Status: <span className={`${surveyor.status === 'approved' ? 'text-green-600' : 'text-yellow-600'}`}>
-                              {surveyor.status}
-                            </span>
-                          </p>
-                        </div>
-                        <span className={`px-2 py-1 text-xs rounded-full ${
-                          surveyor.status === 'approved' 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-yellow-100 text-yellow-800'
-                        }`}>
-                          {surveyor.status === 'approved' ? 'Approved' : 'Pending'}
-                        </span>
-                      </div>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          )}
-        </>
-      )}
-    </Layout>
-  );
-}
+    await prisma.user.update({ where: { id }, data: { status: "rejected" } });
+    res.json({ message: `${role.charAt(0).toUpperCase() + role.slice(1)} rejected.` });
+  } catch (err) {
+    console.error("Rejection error:", err);
+    res.status(500).json({ message: `Could not reject ${role}.` });
+  }
+});
+
+// =================== ADMINS ===================
+
+// ✅ NEW: Get all admins
+router.get("/admins/all", async (req, res) => {
+  try {
+    const admins = await prisma.user.findMany({
+      where: { role: "admin" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        profileImageUrl: true,
+      },
+    });
+    res.json(admins);
+  } catch (err) {
+    console.error("Fetch admins error:", err);
+    res.status(500).json({ message: "Failed to fetch admins." });
+  }
+});
+
+// =================== ADMIN PROFILE ===================
+router.get("/profile/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+
+  try {
+    const admin = await prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        profileImageUrl: true,
+        role: true,
+        notificationsEnabled: true,
+      },
+    });
+
+    if (!admin || admin.role !== "admin") {
+      return res.status(403).json({ message: "Access denied. Not an admin." });
+    }
+
+    res.json(admin);
+  } catch (err) {
+    console.error("Profile fetch error:", err);
+    res.status(500).json({ message: "Failed to load profile." });
+  }
+});
+
+router.get("/profile-by-email", async (req, res) => {
+  const { email } = req.query;
+
+  if (!email) return res.status(400).json({ message: "Email is required." });
+
+  try {
+    const admin = await prisma.user.findFirst({
+      where: { email, role: "admin" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phoneNumber: true,
+        profileImageUrl: true,
+      },
+    });
+
+    if (!admin) return res.status(404).json({ message: "Admin not found." });
+
+    res.json(admin);
+  } catch (err) {
+    console.error("Fetch by email error:", err);
+    res.status(500).json({ message: "Failed to load profile." });
+  }
+});
+
+router.put("/profile/:id", upload.single("profileImage"), async (req, res) => {
+  const { id } = req.params;
+  const { name, email, phoneNumber } = req.body;
+  const profileImageUrl = req.file ? `/uploads/${req.file.filename}` : undefined;
+
+  try {
+    const updated = await prisma.user.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        email,
+        phoneNumber,
+        ...(profileImageUrl && { profileImageUrl }),
+      },
+    });
+
+    res.json(updated);
+  } catch (err) {
+    console.error("Update profile error:", err);
+    res.status(500).json({ message: "Failed to update profile." });
+  }
+});
+
+// =================== CHANGE PASSWORD ===================
+router.put("/change-password/:id", async (req, res) => {
+  const id = parseInt(req.params.id);
+  const { oldPassword, newPassword } = req.body;
+
+  if (!oldPassword || !newPassword) {
+    return res.status(400).json({ message: "Old and new passwords are required." });
+  }
+
+  try {
+    const user = await prisma.user.findUnique({ where: { id } });
+    if (!user) {
+      return res.status(404).json({ message: "User not found." });
+    }
+
+    const isMatch = await bcrypt.compare(oldPassword, user.password);
+    if (!isMatch) {
+      return res.status(403).json({ message: "Old password is incorrect." });
+    }
+
+    const hashedNew = await bcrypt.hash(newPassword, 10);
+    await prisma.user.update({ where: { id }, data: { password: hashedNew } });
+
+    res.json({ message: "Password changed successfully." });
+  } catch (err) {
+    console.error("Change password error:", err);
+    res.status(500).json({ message: "Failed to change password." });
+  }
+});
+
+module.exports = router;
