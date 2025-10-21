@@ -1,32 +1,13 @@
-const nodemailer = require("nodemailer");
+import { Resend } from "resend";
+import dotenv from "dotenv";
+dotenv.config();
 
-const transporter = nodemailer.createTransport({
-  service: "gmail", // or a better SMTP provider for production
-  auth: {
-    user: process.env.EMAIL_USERNAME,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-});
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 // ✅ OTP Email
-async function sendOTP(toEmail, otp) {
-  const mailOptions = {
-    from: `"LandLink Ltd" <${process.env.EMAIL_USERNAME}>`,
-    to: toEmail,
-    subject: "Your OTP Code to Verify Your Email",
-    text: `
-Hi there,
-
-Your One-Time Password (OTP) for LandLink is: ${otp}
-
-Please enter this code within 3 minutes to verify your email address.
-
-If you didn't request this, you can safely ignore this email.
-
-Thanks,  
-LandLink Ltd
-    `.trim(),
-    html: `
+export async function sendOTP(toEmail, otp) {
+  try {
+    const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #fff6e5;">
         <h2 style="color:rgb(203, 120, 25);">Verify Your Email - LandLink Ltd</h2>
         <p style="font-size: 15px; color: #333;">Hello,</p>
@@ -49,38 +30,29 @@ LandLink Ltd
           <a href="mailto:support@landlink.co.ke" style="color: #999;">support@landlink.co.ke</a> | landlink.co.ke
         </div>
       </div>
-    `,
-  };
+    `;
 
-  return transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: "LandLink <onboarding@resend.dev>",
+      to: toEmail,
+      subject: "Your OTP Code to Verify Your Email",
+      html,
+    });
+
+    console.log("✅ OTP email sent to:", toEmail);
+  } catch (error) {
+    console.error("❌ Failed to send OTP email:", error);
+  }
 }
 
-
 // ✅ Password Reset Email
-async function sendPasswordResetEmail(toEmail, token) {
-  // Include email in query params, properly encoded
-  const resetLink = `https://landlink.co.ke/reset-password?email=${encodeURIComponent(toEmail)}&token=${encodeURIComponent(token)}`;
+export async function sendPasswordResetEmail(toEmail, token) {
+  try {
+    const resetLink = `https://landlink.co.ke/reset-password?email=${encodeURIComponent(
+      toEmail
+    )}&token=${encodeURIComponent(token)}`;
 
-  const mailOptions = {
-    from: `"LandLink Ltd" <${process.env.EMAIL_USERNAME}>`,
-    to: toEmail,
-    subject: "Reset Your Password - LandLink",
-    text: `
-Hello,
-
-We received a request to reset your password for your LandLink account.
-
-Click the link below to set a new password:
-${resetLink}
-
-This link will expire in 15 minutes.
-
-If you did not request this, please ignore this email.
-
-Thanks,  
-LandLink Ltd
-    `.trim(),
-    html: `
+    const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eee; border-radius: 10px; background-color: #fff6e5;">
         <h2 style="color:rgb(203, 120, 25);">Reset Your Password - LandLink</h2>
         <p style="font-size: 15px; color: #333;">Hi,</p>
@@ -102,11 +74,17 @@ LandLink Ltd
           <a href="mailto:support@landlink.co.ke" style="color: #999;">support@landlink.co.ke</a> | landlink.co.ke
         </div>
       </div>
-    `,
-  };
+    `;
 
-  return transporter.sendMail(mailOptions);
+    await resend.emails.send({
+      from: "LandLink <onboarding@resend.dev>",
+      to: toEmail,
+      subject: "Reset Your Password - LandLink",
+      html,
+    });
+
+    console.log("✅ Password reset email sent to:", toEmail);
+  } catch (error) {
+    console.error("❌ Failed to send password reset email:", error);
+  }
 }
-
-
-module.exports = { sendOTP, sendPasswordResetEmail };
