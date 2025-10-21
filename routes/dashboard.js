@@ -25,9 +25,9 @@ const upload = multer({ storage });
 
 // ======================= BOOKINGS =======================
 
-// Create a new booking
+// Create a new booking (UPDATED with county field)
 router.post("/bookings", async (req, res) => {
-  const { location, surveyType, description, preferredDate, email, latitude, longitude } = req.body;
+  const { location, county, surveyType, description, preferredDate, email, latitude, longitude } = req.body;
 
   if (!email || !location || !surveyType || !description || !preferredDate) {
     return res.status(400).json({ message: "All fields are required." });
@@ -40,6 +40,7 @@ router.post("/bookings", async (req, res) => {
     const newBooking = await prisma.booking.create({
       data: {
         location,
+        county, // NEW: Added county field (optional)
         surveyType,
         description,
         preferredDate: new Date(preferredDate),
@@ -57,7 +58,7 @@ router.post("/bookings", async (req, res) => {
   }
 });
 
-// Get bookings for a specific user by email
+// Get bookings for a specific user by email (UNCHANGED - county automatically included)
 router.get("/bookings", async (req, res) => {
   const { userEmail } = req.query;
 
@@ -84,7 +85,7 @@ router.get("/bookings", async (req, res) => {
 
 // ======================= PROFILE =======================
 
-// Get profile (client or surveyor)
+// Get profile (client or surveyor) - UNCHANGED
 router.get("/profile", async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ message: "Email required." });
@@ -113,7 +114,7 @@ router.get("/profile", async (req, res) => {
   }
 });
 
-// Update profile (name, phone, profile image)
+// Update profile (name, phone, profile image) - UNCHANGED
 router.put("/profile", upload.single("profileImage"), async (req, res) => {
   const { email, name, phoneNumber } = req.body;
 
@@ -141,7 +142,7 @@ router.put("/profile", upload.single("profileImage"), async (req, res) => {
   }
 });
 
-// Toggle notifications
+// Toggle notifications - UNCHANGED
 router.put("/profile/toggle-notifications", async (req, res) => {
   const { email } = req.body;
 
@@ -163,7 +164,7 @@ router.put("/profile/toggle-notifications", async (req, res) => {
   }
 });
 
-// Change password
+// Change password - UNCHANGED
 router.put("/profile/change-password", async (req, res) => {
   const { email, newPassword } = req.body;
 
