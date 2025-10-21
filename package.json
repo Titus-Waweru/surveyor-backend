@@ -27,6 +27,7 @@
     "paystack-api": "^2.0.6",
     "pg": "^8.15.6",
     "prisma": "^6.8.2",
+    "resend": "^6.2.0",
     "twilio": "^5.6.1"
   },
   "devDependencies": {
