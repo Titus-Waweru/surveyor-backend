@@ -42,7 +42,7 @@ export async function sendOTP(toEmail, otp) {
     console.log("📧 sendOTP: Calling Resend API...");
     
     const result = await resend.emails.send({
-      from: "LandLink <onboarding@resend.dev>",
+      from: "LandLink <noreply@mail.landlink.co.ke>", // ← CHANGED TO YOUR DOMAIN
       to: toEmail,
       subject: "Your OTP Code to Verify Your Email",
       html,
@@ -58,7 +58,7 @@ export async function sendOTP(toEmail, otp) {
     console.error("❌ sendOTP: Error message:", error.message);
     console.error("❌ sendOTP: Error code:", error.code);
     console.error("❌ sendOTP: Full error:", error);
-    throw error; // Re-throw to see in auth.js
+    throw error;
   }
 }
 
@@ -100,7 +100,7 @@ export async function sendPasswordResetEmail(toEmail, token) {
     console.log("📧 sendPasswordResetEmail: Calling Resend API...");
     
     const result = await resend.emails.send({
-      from: "LandLink <onboarding@resend.dev>",
+      from: "LandLink <noreply@mail.landlink.co.ke>", // ← CHANGED TO YOUR DOMAIN
       to: toEmail,
       subject: "Reset Your Password - LandLink",
       html,
