@@ -7,8 +7,11 @@ const path = require("path");
 
 const prisma = new PrismaClient();
 
-// ====== Admin Secret Code (ENV) ======
-const ADMIN_SECRET_CODE = process.env.ADMIN_SECRET_CODE || "admin2024";
+// ====== Admin Secret Code (ENV ONLY) ======
+if (!process.env.ADMIN_SECRET_CODE) {
+  console.warn("⚠️ Warning: ADMIN_SECRET_CODE is not set in environment variables!");
+}
+const ADMIN_SECRET_CODE = process.env.ADMIN_SECRET_CODE;
 
 // ===== Multer Setup for Profile Image Upload =====
 const storage = multer.diskStorage({
