@@ -28,14 +28,14 @@ router.post(
 
     try {
       const existing = await prisma.user.findUnique({ where: { email } });
-      if (existing) return res.status(400).json({ message: "User already exists." });
+      if (existing) return res.status(400).json({ message: "An account with this email already exists. Please try logging in or use a different email address." });
 
       if (
         (role === "surveyor" || role === "gis-expert") &&
         (!idCardFile || !certFile || !iskNumber?.trim())
       ) {
         return res.status(400).json({
-          message: `${role === "surveyor" ? "Surveyors" : "GIS Experts"} must upload ID card, certificate, and ISK number.`,
+          message: `To register as a ${role === "surveyor" ? "Surveyor" : "GIS Expert"}, please provide your ISK number and upload both your ID card and professional certificate.`,
         });
       }
 
@@ -61,11 +61,11 @@ router.post(
       await sendOTP(email, otp);
 
       return res.status(200).json({
-        message: "✅ OTP sent to your email. Please verify to complete signup.",
+        message: "✅ Verification code sent! Please check your email to complete your registration.",
       });
     } catch (err) {
       console.error("Signup error:", err);
-      return res.status(500).json({ message: "Server error during signup." });
+      return res.status(500).json({ message: "We encountered an issue while creating your account. Please try again in a moment." });
     }
   }
 );
@@ -78,17 +78,17 @@ router.post("/verify-otp", async (req, res) => {
   const tempUser = tempUsers.get(email);
 
   if (!tempUser) {
-    return res.status(400).json({ message: "Signup not initiated or expired." });
+    return res.status(400).json({ message: "We couldn't find your signup session. Please start the registration process again." });
   }
 
   const now = new Date();
   if (now > new Date(tempUser.otpExpiresAt)) {
     tempUsers.delete(email);
-    return res.status(400).json({ message: "OTP has expired. Please request a new one." });
+    return res.status(400).json({ message: "This verification code has expired. Please request a new one." });
   }
 
   if (tempUser.otp !== otp) {
-    return res.status(400).json({ message: "❌ Invalid OTP." });
+    return res.status(400).json({ message: "The code you entered doesn't match. Please check and try again." });
   }
 
   try {
@@ -100,7 +100,7 @@ router.post("/verify-otp", async (req, res) => {
       tempUsers.delete(email);
 
       return res.status(201).json({
-        message: "✅ OTP verified. Awaiting admin approval.",
+        message: "✅ Account created successfully! Your application is now under review. We'll notify you once approved.",
         role: newUser.role,
         status: newUser.status,
       });
@@ -111,13 +111,13 @@ router.post("/verify-otp", async (req, res) => {
     tempUsers.delete(email);
 
     return res.status(201).json({
-      message: "✅ OTP verified. Signup completed.",
+      message: "✅ Welcome aboard! Your account has been successfully created.",
       role: newUser.role,
       status: newUser.status,
     });
   } catch (err) {
     console.error("OTP verification error:", err);
-    return res.status(500).json({ message: "Server error during verification." });
+    return res.status(500).json({ message: "We're having trouble verifying your code right now. Please try again shortly." });
   }
 });
 
@@ -129,7 +129,7 @@ router.post("/resend-otp", async (req, res) => {
   const tempUser = tempUsers.get(email);
 
   if (!tempUser) {
-    return res.status(400).json({ message: "Signup not initiated or expired." });
+    return res.status(400).json({ message: "We couldn't find your signup session. Please start the registration process again." });
   }
 
   try {
@@ -141,10 +141,10 @@ router.post("/resend-otp", async (req, res) => {
     tempUsers.set(email, tempUser);
 
     await sendOTP(email, newOtp);
-    return res.status(200).json({ message: "OTP resent successfully." });
+    return res.status(200).json({ message: "A new verification code has been sent to your email." });
   } catch (err) {
     console.error("Resend OTP error:", err);
-    return res.status(500).json({ message: "Failed to resend OTP." });
+    return res.status(500).json({ message: "We're unable to send a new code right now. Please try again in a few minutes." });
   }
 });
 
@@ -155,30 +155,30 @@ router.post("/login", async (req, res) => {
   const { email, password } = req.body;
 
   if (!email || !password) {
-    return res.status(400).json({ message: "Email and password are required." });
+    return res.status(400).json({ message: "Please enter both your email and password to continue." });
   }
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user || !user.password) {
-      return res.status(400).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: "The email or password you entered is incorrect. Please check and try again." });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(400).json({ message: "Invalid email or password." });
+      return res.status(400).json({ message: "The email or password you entered is incorrect. Please check and try again." });
     }
 
     if ((user.role === "surveyor" || user.role === "gis-expert") && user.status !== "approved") {
       return res.status(403).json({
-        message: `${user.role === "surveyor" ? "Surveyor" : "GIS Expert"} not approved yet. We’ll notify you after review.`,
+        message: `Thank you for your patience! Your ${user.role === "surveyor" ? "Surveyor" : "GIS Expert"} application is still under review. We'll notify you as soon as it's approved.`,
       });
     }
 
     const jwtSecret = process.env.JWT_SECRET;
     if (!jwtSecret) {
       console.error("❌ JWT_SECRET is not defined.");
-      return res.status(500).json({ message: "Server misconfiguration." });
+      return res.status(500).json({ message: "We're experiencing technical difficulties. Please try again later." });
     }
 
     const token = jwt.sign(
@@ -196,7 +196,7 @@ router.post("/login", async (req, res) => {
     });
   } catch (err) {
     console.error("Login error:", err);
-    return res.status(500).json({ message: "Server error during login." });
+    return res.status(500).json({ message: "We're having trouble signing you in right now. Please try again in a moment." });
   }
 });
 
@@ -204,7 +204,7 @@ router.post("/login", async (req, res) => {
  * LOGOUT
  */
 router.post("/logout", (req, res) => {
-  return res.status(200).json({ message: "Logged out successfully." });
+  return res.status(200).json({ message: "You've been successfully logged out. See you next time!" });
 });
 
 /**
@@ -215,14 +215,14 @@ router.post("/request-password-reset", async (req, res) => {
   const { email } = req.body;
 
   if (!email) {
-    return res.status(400).json({ message: "Email is required." });
+    return res.status(400).json({ message: "Please enter your email address so we can send you reset instructions." });
   }
 
   try {
     const user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
       // To prevent email enumeration, respond with success anyway
-      return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+      return res.status(200).json({ message: "If an account with that email exists, you'll receive password reset instructions shortly." });
     }
 
     // Generate secure random token
@@ -241,10 +241,10 @@ router.post("/request-password-reset", async (req, res) => {
     // Send password reset email with token (link)
     await sendPasswordResetEmail(email, resetToken);
 
-    return res.status(200).json({ message: "If the email exists, a reset link has been sent." });
+    return res.status(200).json({ message: "If an account with that email exists, you'll receive password reset instructions shortly." });
   } catch (err) {
     console.error("Request password reset error:", err);
-    return res.status(500).json({ message: "Server error during password reset request." });
+    return res.status(500).json({ message: "We're unable to process your password reset request right now. Please try again later." });
   }
 });
 
@@ -256,7 +256,7 @@ router.post("/reset-password", async (req, res) => {
   const { email, token, newPassword } = req.body;
 
   if (!email || !token || !newPassword) {
-    return res.status(400).json({ message: "Email, token, and new password are required." });
+    return res.status(400).json({ message: "Please provide all required information to reset your password." });
   }
 
   try {
@@ -268,7 +268,7 @@ router.post("/reset-password", async (req, res) => {
       !user.resetTokenExpiry ||
       new Date() > new Date(user.resetTokenExpiry)
     ) {
-      return res.status(400).json({ message: "Invalid or expired reset token." });
+      return res.status(400).json({ message: "This password reset link is invalid or has expired. Please request a new one." });
     }
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
@@ -283,10 +283,10 @@ router.post("/reset-password", async (req, res) => {
       },
     });
 
-    return res.status(200).json({ message: "Password reset successful. You can now log in." });
+    return res.status(200).json({ message: "Your password has been successfully reset! You can now log in with your new password." });
   } catch (err) {
     console.error("Reset password error:", err);
-    return res.status(500).json({ message: "Server error during password reset." });
+    return res.status(500).json({ message: "We're having trouble resetting your password right now. Please try again later." });
   }
 });
 
